@@ -317,3 +317,154 @@ summary::after {
 details[open] summary::after {
   content: "▲";
 }
+
+#settingsModal {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(0, 0, 0, 0.72);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#settingsModal.hidden {
+  display: none;
+}
+
+.settings-window {
+  width: min(560px, 88vw);
+  height: min(680px, 88vh);
+  background: #222;
+  border: 1px solid #444;
+  border-radius: 8px;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.7);
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  overflow: hidden;
+}
+
+.settings-tabs {
+  background: #181818;
+  border-right: 1px solid #333;
+  padding: 22px 14px;
+}
+
+.settings-tabs h2 {
+  margin: 0 0 18px;
+  padding: 0 10px;
+  font-size: 20px;
+  color: white;
+}
+
+.settings-tab {
+  width: 100%;
+  padding: 10px 12px;
+  margin-bottom: 6px;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  color: #aaa;
+  text-align: left;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.settings-tab:hover {
+  background: #2b2b2b !important;
+  color: white;
+}
+
+.settings-tab.active {
+  background: #3a254f !important;
+  color: #c28cff;
+}
+
+.settings-content {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.settings-page {
+  display: none;
+  padding: 28px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.settings-page.active {
+  display: block;
+}
+
+.settings-page h2 {
+  margin: 0 0 22px;
+  font-size: 22px;
+  color: white;
+}
+
+.settings-page label {
+  display: block;
+  margin: 16px 0 6px;
+  font-size: 12px;
+  color: #aaa;
+  text-transform: uppercase;
+}
+
+.settings-page input,
+.settings-page select {
+  width: 100%;
+  box-sizing: border-box;
+  background: #333;
+  color: white;
+  border: 1px solid #555;
+  border-radius: 5px;
+  padding: 9px 10px;
+}
+
+.settings-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.settings-action-btn {
+  width: 100%;
+  margin-top: 14px;
+  padding: 10px;
+  background: #444;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.settings-footer {
+  border-top: 1px solid #333;
+  padding: 14px 20px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  background: #1d1d1d;
+}
+
+.settings-footer button {
+  padding: 9px 16px;
+  border-radius: 5px;
+  cursor: pointer;
+  border: 1px solid #555;
+  background: #333;
+  color: white;
+}
+
+#saveSettingsBtn {
+  background: #2d0659;
+  border-color: #a97ce6;
+  color: #c28cff;
+}
+
+#deleteVideoBtn {
+  background: #4a0a0a;
+  border-color: #ff4444;
+  color: #ff6666;
+}

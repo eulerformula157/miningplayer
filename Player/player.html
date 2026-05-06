@@ -16,71 +16,105 @@
   </select>
 </div>
 
-<div id="settingsMenu" class="hidden">
-  <div style="padding: 10px; display: flex; flex-direction: column; gap: 8px;">
+<div id="settingsModal" class="hidden">
+  <div class="settings-window">
+    
+    <aside class="settings-tabs">
+      <h2 data-i18n="settings">Settings</h2>
 
-    <details id="detailsSubtitle">
-      <summary data-i18n="ankiSettings">Anki Card Settings</summary>
-      <div style="padding: 5px 0; display: flex; flex-direction: column; gap: 5px;">
-        <label style="font-size: 11px;" data-i18n="offset">Offset (Start/End):</label>
-        <div style="display: flex; gap: 5px;">
-          <input type="number" id="subOffsetStart" value="0" step="0.1" style="width: 50%; background: #333; color: white;">
-          <input type="number" id="subOffsetEnd" value="0" step="0.1" style="width: 50%; background: #333; color: white;">
+      <button class="settings-tab active" data-settings-tab="card" data-i18n="cardSettings">
+        Anki Card Settings
+      </button>
+
+      <button class="settings-tab" data-settings-tab="visuals" data-i18n="visuals">
+        Visuals
+      </button>
+
+      <button class="settings-tab" data-settings-tab="anki" data-i18n="ankiIntegration">
+        Anki Integration
+      </button>
+    </aside>
+
+    <section class="settings-content">
+
+      <div class="settings-page active" data-settings-page="card">
+        <h2 data-i18n="cardSettings">Anki Card Settings</h2>
+
+        <label data-i18n="offset">Offset (Start / End):</label>
+        <div class="settings-row">
+          <input type="number" id="subOffsetStart" value="0" step="0.1">
+          <input type="number" id="subOffsetEnd" value="0" step="0.1">
         </div>
-        <label style="font-size: 11px;" data-i18n="subDepth">SubDepth:</label>
-        <input type="number" id="subDepth" value="1" min="1" max="5" style="background: #333; color: white; border: 1px solid #555;">
-        <label style="font-size: 11px;" data-i18n="audioVol">Audio Volume:</label>
+
+        <label data-i18n="subDepth">Subtitle context:</label>
+        <input type="number" id="subDepth" value="1" min="1" max="5">
+
+        <label data-i18n="audioVol">Audio Volume:</label>
         <input type="number" id="audioVol" value="1.0" step="0.1" min="0" max="2.0">
-        <button id="previewAudioBtn" data-i18n="previewAudio" style="background: #444; border:none; color:white; padding:5px; cursor:pointer;">Preview Audio</button>
-        <label style="font-size: 11px;" data-i18n="screenshotMode">Screenshot Mode:</label>
-        <select id="screenshotMode" style="width: 100%; background: #333; color: white; padding: 6px; margin-bottom: 5px;">
-		  <option value="subtitle" data-i18n="ssSubtitle">Subtitle Time</option>
+
+        <button id="previewAudioBtn" class="settings-action-btn" data-i18n="previewAudio">
+          Preview Audio
+        </button>
+
+        <label data-i18n="screenshotMode">Screenshot Mode:</label>
+        <select id="screenshotMode">
+          <option value="subtitle" data-i18n="ssSubtitle">Subtitle Time</option>
           <option value="current" data-i18n="ssCurrent">Current Frame</option>
-		  <option value="webp" data-i18n="ssWebp">Animated WebP</option>
+          <option value="webp" data-i18n="ssWebp">Animated WebP</option>
         </select>
       </div>
-    </details>
 
-    <details id="detailsVisuals">
-      <summary data-i18n="visuals">Visuals</summary>
-      <div style="padding: 5px 0;">
-        <button id="toggleSubs" data-i18n="hideSubs" style="width: 100%; background: #444; border:none; color:white; padding:6px; cursor:pointer; text-align: center;">Hide Subs</button>
-        <label style="font-size: 11px;" data-i18n="fontSize">Font size:</label>
-        <input type="range" id="fontSizeRange" class="slider" min="20" max="80" step="1" value="40" style="width: 100%;">
-		
-	<label style="font-size: 11px;" data-i18n="globalSubDelay">Global Sub Delay (s):</label>
-	<div style="display: flex; gap: 5px; align-items: center;">
-	  <input type="number" id="globalSubDelay" value="0" step="0.1" style="width: 100%; background: #333; color: white; border: 1px solid #555;">
-	</div>
-		
-		<label style="font-size: 11px;" data-i18n="interfaceLang">Interface Language:</label>
-		<select id="interfaceLangSelect" style="width: 100%; background: #333; color: white; padding: 6px; margin-bottom: 5px;">
-    </select>
+      <div class="settings-page" data-settings-page="visuals">
+        <h2 data-i18n="visuals">Visuals</h2>
+
+        <button id="toggleSubs" class="settings-action-btn" data-i18n="hideSubs">
+          Hide Subs
+        </button>
+
+        <label data-i18n="fontSize">Font size:</label>
+        <input type="range" id="fontSizeRange" class="slider" min="20" max="80" step="1" value="40">
+
+        <label data-i18n="globalSubDelay">Global Sub Delay (s):</label>
+        <input type="number" id="globalSubDelay" value="0" step="0.1">
+
+        <label data-i18n="interfaceLang">Interface Language:</label>
+        <select id="interfaceLangSelect"></select>
       </div>
-    </details>
 
-    <details id="detailsAnki">
-      <summary data-i18n="ankiIntegration">Anki Integration</summary>
-      <div style="padding: 5px 0;">
-        <label style="font-size: 11px;" data-i18n="ankiURL">Anki URL:</label>
-        <input type="text" id="ankiUrl" value="http://localhost:8765" style="width: 100%; background: #333; color: white; border: 1px solid #555; margin-bottom: 5px;">
-        <label style="font-size: 11px;" data-i18n="deckName">Deck Name:</label>
-        <input type="text" id="deckName" value="Mining Deck" style="width: 100%; background: #333; color: white; border: 1px solid #555; margin-bottom: 5px;">
-		
-		<label style="font-size: 11px;" data-i18n="sentenceField">Sentence Field:</label>
-		<input type="text" id="sentenceField" value="Sentence" style="width: 100%; background: #333; color: white; border: 1px solid #555; margin-bottom: 5px;">
+      <div class="settings-page" data-settings-page="anki">
+        <h2 data-i18n="ankiIntegration">Anki Integration</h2>
 
-		<label style="font-size: 11px;" data-i18n="pictureField">Picture Field:</label>
-		<input type="text" id="pictureField" value="Picture" style="width: 100%; background: #333; color: white; border: 1px solid #555; margin-bottom: 5px;">
+        <label data-i18n="ankiURL">AnkiConnect URL:</label>
+        <input type="text" id="ankiUrl" value="http://localhost:8765">
 
-		<label style="font-size: 11px;" data-i18n="audioField">Audio Field:</label>
-		<input type="text" id="audioField" value="SentenceAudio" style="width: 100%; background: #333; color: white; border: 1px solid #555; margin-bottom: 5px;">
+        <label data-i18n="deckName">Deck Name:</label>
+        <input type="text" id="deckName" value="Mining Deck">
+
+        <label data-i18n="sentenceField">Sentence Field:</label>
+        <input type="text" id="sentenceField" value="Sentence">
+
+        <label data-i18n="pictureField">Picture Field:</label>
+        <input type="text" id="pictureField" value="Picture">
+
+        <label data-i18n="audioField">Audio Field:</label>
+        <input type="text" id="audioField" value="SentenceAudio">
       </div>
-    </details>
 
-    <button id="saveSettingsBtn" data-i18n="saveSettings" style="background: #2d0659; color:#a97ce6; padding:5px; border: 1px solid #a97ce6; cursor:pointer; margin-top: 5px;">Save Settings</button>
-    <button id="deleteVideoBtn" data-i18n="clear" style="color: #ff4444; background: #4a0a0a; border: 1px solid #ff4444; cursor: pointer; padding: 5px;">Clear</button>
+      <div class="settings-footer">
+        <button id="saveSettingsBtn" data-i18n="saveSettings">
+          Save Settings
+        </button>
 
+        <button id="deleteVideoBtn" data-i18n="clear">
+          Clear
+        </button>
+
+        <button id="closeSettingsBtn" data-i18n="closeSettings">
+          Close
+        </button>
+      </div>
+
+    </section>
   </div>
 </div>
 

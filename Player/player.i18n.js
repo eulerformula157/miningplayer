@@ -10,7 +10,7 @@ const i18n = {
             saveSettings: "Сохранить настройки",
             settings: "Настройки",
             updateCard: "Обновить карточку",
-            ankiSettings: "Настройки Anki",
+            cardSettings: "Настройки Карточки",
             offset: "Смещение (Начало / Конец):",
             subDepth: "Контекст субтитров:",
             audioVol: "Громкость аудио:",
@@ -34,7 +34,8 @@ const i18n = {
 			sentenceField: "Поле предложения",
 			pictureField: "Поле картинки",
 			audioField: "Поле предложения аудио",
-			ssWebp: "Анимированный WebP"
+			ssWebp: "Анимированный WebP",
+			closeSettings: "Закрыть"
         }
     },
     en: {
@@ -48,7 +49,7 @@ const i18n = {
             saveSettings: "Save Settings",
             settings: "Settings",
             updateCard: "Update Card",
-            ankiSettings: "Anki Card Settings",
+            cardSettings: "Card Settings",
             offset: "Offset (Start / End):",
             subDepth: "Subtitle context:",
             audioVol: "Audio Volume:",
@@ -72,7 +73,8 @@ const i18n = {
 			sentenceField: "Sentence Field:",
 			pictureField: "Picture Field:",
 			audioField: "Audio sentence Field:",
-			ssWebp: "Animated WebP"
+			ssWebp: "Animated WebP",
+			closeSettings: "Close"
         }
     },
     ja: {
@@ -86,7 +88,7 @@ const i18n = {
             saveSettings: "設定を保存",
             settings: "設定",
             updateCard: "カードを更新",
-            ankiSettings: "Ankiカード設定",
+            cardSettings: "Ankiカード設定",
             offset: "オフセット（開始 / 終了）:",
             subDepth: "字幕の深さ:",
             audioVol: "音量:",
@@ -110,7 +112,8 @@ const i18n = {
 			sentenceField: "文フィールド:",
 			pictureField: "画像フィールド:",
 			audioField: "音声文フィールド:",
-			ssWebp: "アニメーションWebP",		
+			ssWebp: "アニメーションWebP",	
+			closeSettings: "閉じる"			
         }
     }
 };

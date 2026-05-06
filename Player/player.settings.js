@@ -1,5 +1,5 @@
 function enableWheelOnSettings() {
-    const settingsInputs = document.querySelectorAll("#settingsMenu input[type=\"number\"], #settingsMenu input[type=\"range\"]");
+    const settingsInputs = document.querySelectorAll("#settingsModal input[type=\"number\"], #settingsModal input[type=\"range\"]");
     settingsInputs.forEach((input) => {
         input.addEventListener("wheel", (e) => {
             e.preventDefault();
@@ -46,9 +46,6 @@ function saveSettings() {
         ankiUrl: document.getElementById("ankiUrl").value,
         deckName: document.getElementById("deckName").value,
         screenshotMode: document.getElementById("screenshotMode").value,
-        detailsSubtitleOpen: document.getElementById("detailsSubtitle").open,
-        detailsVisualsOpen: document.getElementById("detailsVisuals").open,
-        detailsAnkiOpen: document.getElementById("detailsAnki").open,
 		globalSubDelay: document.getElementById("globalSubDelay").value,
         sidebarWidth: document.getElementById("sidebar").style.width,
 		sentenceField: document.getElementById("sentenceField").value,
@@ -93,10 +90,6 @@ function loadSettings() {
 		audioField: settings.audioField
     };
 
-	// sync the JS variable
-	const delayEl = document.getElementById("globalSubDelay");
-	if (delayEl) globalSubDelay = parseFloat(delayEl.value) || 0;
-
     for (const [id, value] of Object.entries(mapping)) {
         const el = document.getElementById(id);
         if (el && value !== undefined) {
@@ -105,16 +98,9 @@ function loadSettings() {
         }
     }
 
-    [
-        { id: "detailsSubtitle", isOpen: settings.detailsSubtitleOpen },
-        { id: "detailsVisuals", isOpen: settings.detailsVisualsOpen },
-        { id: "detailsAnki", isOpen: settings.detailsAnkiOpen }
-    ].forEach((item) => {
-        const el = document.getElementById(item.id);
-        if (!el) return;
-        if (item.isOpen) el.setAttribute("open", "");
-        else el.removeAttribute("open");
-    });
+	const delayEl = document.getElementById("globalSubDelay");
+	if (delayEl) globalSubDelay = parseFloat(delayEl.value) || 0;
+
 }
 
 function applyLanguage(lang) {

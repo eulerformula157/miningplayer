@@ -5,7 +5,8 @@ const sidebar = document.getElementById("sidebar");
 const multiInput = document.getElementById("multiInput");
 const fullscreenBtn = document.getElementById("fullscreenBtn");
 const settingsBtn = document.getElementById("settingsBtn");
-const settingsMenu = document.getElementById("settingsMenu");
+const settingsModal = document.getElementById("settingsModal");
+const closeSettingsBtn = document.getElementById("closeSettingsBtn");
 const dropzone = document.getElementById("dropzone");
 const toggleBtn = document.getElementById("toggleSubs");
 const overlay = document.getElementById("subtitleOverlay");
@@ -220,12 +221,37 @@ video.onclick = () => {
     else video.pause();
 };
 
-document.addEventListener("keydown", (e) => {
-    if (e.code === "Space" && e.target.tagName !== "INPUT") {
-        e.preventDefault();
-        if (video.paused) video.play();
-        else video.pause();
+closeSettingsBtn.onclick = () => {
+    settingsModal.classList.add("hidden");
+};
+
+settingsModal.addEventListener("click", (e) => {
+    if (e.target === settingsModal) {
+        settingsModal.classList.add("hidden");
     }
+});
+
+document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+        settingsModal.classList.add("hidden");
+    }
+});
+
+document.querySelectorAll(".settings-tab").forEach((tab) => {
+    tab.addEventListener("click", () => {
+        const targetTab = tab.dataset.settingsTab;
+
+        document.querySelectorAll(".settings-tab").forEach((item) => {
+            item.classList.toggle("active", item === tab);
+        });
+
+        document.querySelectorAll(".settings-page").forEach((page) => {
+            page.classList.toggle(
+                "active",
+                page.dataset.settingsPage === targetTab
+            );
+        });
+    });
 });
 
 progress.oninput = () => {
@@ -574,12 +600,12 @@ videoContainer.addEventListener("wheel", (e) => {
 
 settingsBtn.onclick = (e) => {
     e.stopPropagation();
-    settingsMenu.classList.toggle("hidden");
+    settingsModal.classList.remove("hidden");
 };
 
 document.addEventListener("click", (e) => {
-    if (!settingsMenu.contains(e.target) && e.target !== settingsBtn) {
-        settingsMenu.classList.add("hidden");
+    if (!settingsModal.contains(e.target) && e.target !== settingsBtn) {
+        settingsModal.classList.add("hidden");
     }
 });
 
