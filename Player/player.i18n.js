@@ -30,7 +30,10 @@ const i18n = {
             lastAdded: "Последняя добавленная (авто)",
             fullscreen: "Полный экран",
 			globalSubDelay: "Смещение субтитров (с):",   
-            exitFullscreen: "Выйти из полного экрана"
+            exitFullscreen: "Выйти из полного экрана",
+			sentenceField: "Поле предложения",
+			pictureField: "Поле картинки",
+			audioField: "Поле аудио"
         }
     },
     en: {
@@ -64,7 +67,10 @@ const i18n = {
             lastAdded: "Last added (auto)",
             fullscreen: "Fullscreen",
 			globalSubDelay: "Global Sub Delay (s):",       
-            exitFullscreen: "Exit Fullscreen"
+            exitFullscreen: "Exit Fullscreen",
+			sentenceField: "Sentence Field:",
+			pictureField: "Picture Field:",
+			audioField: "Audio Field:"	
         }
     },
     ja: {
@@ -98,7 +104,10 @@ const i18n = {
             lastAdded: "最後に追加したカード（自動）",
             fullscreen: "全画面",
 			globalSubDelay: "字幕グローバル遅延 (秒):",
-            exitFullscreen: "全画面を終了"
+            exitFullscreen: "全画面を終了",
+		sentenceField: "文フィールド:",
+		pictureField: "画像フィールド:",
+		audioField: "音声フィールド:"			
         }
     }
 };

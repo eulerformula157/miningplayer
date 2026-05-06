@@ -448,6 +448,14 @@ ankiAllBtn.onclick = async () => {
     const ankiUrl = document.getElementById("ankiUrl").value;
     const deckName = document.getElementById("deckName").value;
     const screenshotMode = document.getElementById("screenshotMode").value;
+	
+	const sentenceField = document.getElementById("sentenceField").value.trim();
+	const pictureField = document.getElementById("pictureField").value.trim();
+	const audioField = document.getElementById("audioField").value.trim();
+
+	if (!pictureField || !audioField) {
+		return alert("Picture Field and Audio Field are required!");
+	}
 
 	let currentIdx = subtitles.findIndex((s) => (video.currentTime - globalSubDelay) >= s.start && (video.currentTime - globalSubDelay) <= s.end);
 	if (currentIdx === -1) return alert("There is no active subtitle!");
@@ -509,10 +517,18 @@ ankiAllBtn.onclick = async () => {
                 params: {
                     note: {
                         id: targetNoteId,
-                        fields: {
-                            Picture: `<img src="${sName}">`,
-                            SentenceAudio: `[sound:${aName}]`
-                        }
+						fields: (() => {
+							const fieldsToUpdate = {};
+
+							if (sentenceField) {
+								fieldsToUpdate[sentenceField] = combinedText;
+							}
+
+							fieldsToUpdate[pictureField] = `<img src="${sName}">`;
+							fieldsToUpdate[audioField] = `[sound:${aName}]`;
+
+							return fieldsToUpdate;
+						})()
                     }
                 }
             })

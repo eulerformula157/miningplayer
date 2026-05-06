@@ -50,7 +50,10 @@ function saveSettings() {
         detailsVisualsOpen: document.getElementById("detailsVisuals").open,
         detailsAnkiOpen: document.getElementById("detailsAnki").open,
 		globalSubDelay: document.getElementById("globalSubDelay").value,
-        sidebarWidth: document.getElementById("sidebar").style.width
+        sidebarWidth: document.getElementById("sidebar").style.width,
+		sentenceField: document.getElementById("sentenceField").value,
+		pictureField: document.getElementById("pictureField").value,
+		audioField: document.getElementById("audioField").value
     };
     localStorage.setItem("subtitlePlayerSettings", JSON.stringify(settings));
     alert("Settings saved!");
@@ -84,7 +87,10 @@ function loadSettings() {
         ankiUrl: settings.ankiUrl,
         deckName: settings.deckName,
 		globalSubDelay: settings.globalSubDelay,
-        screenshotMode: settings.screenshotMode
+        screenshotMode: settings.screenshotMode,
+		sentenceField: settings.sentenceField,
+		pictureField: settings.pictureField,
+		audioField: settings.audioField
     };
 
 	// sync the JS variable
