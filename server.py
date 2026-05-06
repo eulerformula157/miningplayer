@@ -12,6 +12,7 @@ import hashlib
 import threading
 from typing import Optional
 
+
 # --- Lightweight .env loader ---
 def _load_env_file(path: Path) -> None:
     if not path.exists():
