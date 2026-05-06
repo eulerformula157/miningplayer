@@ -1,1 +1,10 @@
 .env
+UploadedVideos/
+*.mp4
+*.mkv
+*.webm
+*.avi
+*.mov
+ankiplayer.bat
+miningplayer.md
+.git/

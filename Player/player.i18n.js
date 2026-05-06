@@ -33,7 +33,8 @@ const i18n = {
             exitFullscreen: "Выйти из полного экрана",
 			sentenceField: "Поле предложения",
 			pictureField: "Поле картинки",
-			audioField: "Поле аудио"
+			audioField: "Поле предложения аудио",
+			ssWebp: "Анимированный WebP"
         }
     },
     en: {
@@ -70,7 +71,8 @@ const i18n = {
             exitFullscreen: "Exit Fullscreen",
 			sentenceField: "Sentence Field:",
 			pictureField: "Picture Field:",
-			audioField: "Audio Field:"	
+			audioField: "Audio sentence Field:",
+			ssWebp: "Animated WebP"
         }
     },
     ja: {
@@ -105,9 +107,10 @@ const i18n = {
             fullscreen: "全画面",
 			globalSubDelay: "字幕グローバル遅延 (秒):",
             exitFullscreen: "全画面を終了",
-		sentenceField: "文フィールド:",
-		pictureField: "画像フィールド:",
-		audioField: "音声フィールド:"			
+			sentenceField: "文フィールド:",
+			pictureField: "画像フィールド:",
+			audioField: "音声文フィールド:",
+			ssWebp: "アニメーションWebP",		
         }
     }
 };

@@ -472,29 +472,43 @@ ankiAllBtn.onclick = async () => {
     const combinedText = subtitles.slice(currentIdx, endIdx + 1).map((s) => s.text).join(" ");
 
     try {
-        const [sRes, aRes] = await Promise.all([
-            fetch(buildApiUrl("/screenshot"), {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    filename: currentVideoFile,
-                    time: targetTime,
-                    text: combinedText,
-                    fontSize: document.getElementById("fontSizeRange").value
-                })
-            }),
-            fetch(buildApiUrl("/audio-to-anki"), {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    filename: currentVideoFile,
-                    start: audioStart,
-                    end: audioEnd,
-                    trackIndex: audioTrackSelect.value === "default" ? "a:0" : audioTrackSelect.value,
-                    volume: volumeLevel
-                })
-            })
-        ]);
+		const pictureEndpoint = screenshotMode === "webp"
+			? "/animated-webp"
+			: "/screenshot";
+
+		const picturePayload = screenshotMode === "webp"
+			? {
+				filename: currentVideoFile,
+				start: audioStart,
+				end: audioEnd,
+				text: combinedText,
+				fontSize: document.getElementById("fontSizeRange").value
+			}
+			: {
+				filename: currentVideoFile,
+				time: targetTime,
+				text: combinedText,
+				fontSize: document.getElementById("fontSizeRange").value
+			};
+
+		const [sRes, aRes] = await Promise.all([
+			fetch(buildApiUrl(pictureEndpoint), {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify(picturePayload)
+			}),
+			fetch(buildApiUrl("/audio-to-anki"), {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					filename: currentVideoFile,
+					start: audioStart,
+					end: audioEnd,
+					trackIndex: audioTrackSelect.value === "default" ? "a:0" : audioTrackSelect.value,
+					volume: volumeLevel
+				})
+			})
+		]);
 
         const sData = await sRes.json();
         const aData = await aRes.json();

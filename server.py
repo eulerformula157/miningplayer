@@ -303,6 +303,113 @@ def screenshot():
 
     return jsonify({"filename": screenshot_filename, "reused": False})
 
+# --- Создание WEBP анимации ---
+@app.route('/animated-webp', methods=['POST'])
+def animated_webp():
+    data = request.get_json()
+    filename = data.get('filename')
+    start = data.get('start')
+    end = data.get('end')
+    text = data.get('text', '').strip()
+    font_size = int(3.0 * int(data.get('fontSize', 40)))
+
+    if not filename or start is None or end is None:
+        return jsonify({"error": "Параметры не указаны"}), 400
+
+    try:
+        safe_filename = _safe_media_name(filename)
+    except ValueError as err:
+        return jsonify({"error": str(err)}), 400
+
+    video_path = os.path.join(VIDEO_DIR, safe_filename)
+
+    start_f = round(_to_float(start), 3)
+    end_f = round(_to_float(end), 3)
+
+    if end_f <= start_f:
+        end_f = start_f + 0.5
+
+    # Защита от слишком больших файлов
+    duration = min(end_f - start_f, 8.0)
+
+    normalized_text = _normalize_text(text)
+
+    webp_payload = {
+        "filename": safe_filename,
+        "start": start_f,
+        "duration": round(duration, 3),
+        "text": normalized_text,
+        "fontSize": font_size,
+    }
+
+    webp_key = _make_dedupe_key("screenshot", webp_payload)
+    cached_filename = _get_cached_media("screenshot", webp_key)
+
+    if cached_filename:
+        return jsonify({"filename": cached_filename, "reused": True})
+
+    webp_filename = f"webp_{webp_key[:24]}.webp"
+    final_path = os.path.join(SCREENSHOT_DIR, webp_filename)
+
+    ass_path = os.path.join(VIDEO_DIR, f"temp_{webp_key[:12]}.ass")
+
+    # Экранируем текст для ASS
+    ass_text = text.replace("\\", "\\\\")
+    ass_text = ass_text.replace("{", "\\{").replace("}", "\\}")
+    ass_text = ass_text.replace("\n", "\\N")
+
+    # Формат времени ASS
+    duration_ass = f"0:00:{duration:05.2f}"
+
+    ass_content = f"""[Script Info]
+ScriptType: v4.00+
+PlayResX: 1920
+PlayResY: 1080
+ScaledBorderAndShadow: yes
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, OutlineColour, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: Default,Noto Sans JP,{font_size},&H00FFFFFF,&H00000000,1,12,0,2,40,40,90,1
+
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+Dialogue: 0,0:00:00.00,{duration_ass},Default,,0,0,0,,{ass_text}
+"""
+
+    Path(ass_path).write_text(ass_content, encoding="utf-8")
+
+    # Для Windows FFmpeg-фильтр любит forward slashes
+    ass_filter_path = ass_path.replace("\\", "/").replace(":", "\\:")
+    fonts_dir = os.path.join(os.path.dirname(__file__), "fonts")
+    fonts_dir_filter = fonts_dir.replace("\\", "/").replace(":", "\\:")
+
+    cmd = [
+        "ffmpeg", "-y",
+        "-ss", str(start_f),
+        "-t", str(duration),
+        "-i", video_path,
+        "-vf", f"subtitles='{ass_filter_path}':fontsdir='{fonts_dir_filter}',scale=480:-2:flags=lanczos,fps=10",
+        "-c:v", "libwebp",
+        "-lossless", "0",
+        "-quality", "70",
+        "-compression_level", "6",
+        "-preset", "picture",
+        "-loop", "0",
+        "-an",
+        final_path
+    ]
+
+    try:
+        _run_subprocess(cmd)
+        _save_cached_media("screenshot", webp_key, webp_filename)
+    except RuntimeError as err:
+        return jsonify({"error": f"FFmpeg WebP error: {str(err)}"}), 500
+    finally:
+        if os.path.exists(ass_path):
+            os.remove(ass_path)
+
+    return jsonify({"filename": webp_filename, "reused": False})
+
 # --- Создание аудио ---
 @app.route('/audio-to-anki', methods=['POST'])
 def audio():
