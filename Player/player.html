@@ -89,38 +89,35 @@
 
 <label>Highlight colors:</label>
 
-<div class="settings-row">
-  <label>
-    New
+<div class="highlight-color-item">
+    <label for="highlightColorNew">NEW</label>
     <input type="color" id="highlightColorNew" value="#ffcc66">
-  </label>
-  <label>
-    Learning
+</div>
+
+<div class="highlight-color-item">
+    <label for="highlightColorLearning">LEARNING</label>
     <input type="color" id="highlightColorLearning" value="#66ccff">
-  </label>
 </div>
 
-<div class="settings-row">
-  <label>
-    Young
+<div class="highlight-color-item">
+    <label for="highlightColorYoung">YOUNG</label>
     <input type="color" id="highlightColorYoung" value="#66ccff">
-  </label>
-  <label>
-    Mature
-    <input type="color" id="highlightColorMature" value="#88ff88">
-  </label>
 </div>
 
-<div class="settings-row">
-  <label>
-    Suspended
+<div class="highlight-color-item">
+    <label for="highlightColorMature">MATURE</label>
+    <input type="color" id="highlightColorMature" value="#88ff88">
+</div>
+
+<div class="highlight-color-item">
+    <label for="highlightColorSuspended">SUSPENDED</label>
     <input type="color" id="highlightColorSuspended" value="#999999">
-  </label>
-  <label>
-    Unknown
+</div>
+
+<div class="highlight-color-item">
+    <label for="highlightColorUnknown">UNKNOWN</label>
     <input type="color" id="highlightColorUnknown" value="#ffffff">
-  </label>
-</div>		
+</div>
 		
       </div>
 
@@ -144,13 +141,13 @@
 		
 		<!-- тут сделать нормальный ввод для колоды подсветки и полей -->
 
-		<label>Highlight Decks:</label>
+		<label data-i18n="HighlightDecks">Highlight Decks:</label>
 		<input type="text" id="highlightDeckNames" value="" placeholder="新語帳, Mining Deck, Japanese::Known">
 		
-		<label>Highlight Word Field:</label>
+		<label data-i18n="HighlightWordField">Highlight Word Field:</label>
 		<input type="text" id="highlightWordField" value="Word">		
 
-		<button id="refreshAnkiHighlighterBtn" class="settings-action-btn">
+		<button id="refreshAnkiHighlighterBtn" class="settings-action-btn" data-i18n="refreshAnkiHighlighterBtn">
 		  Refresh Highlight Words
 		</button>
 		

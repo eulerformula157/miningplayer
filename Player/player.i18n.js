@@ -37,7 +37,10 @@ const i18n = {
 			audioField: "Поле предложения аудио",
 			ssWebp: "Анимированный WebP",
 			closeSettings: "Закрыть",
-			includeImageSubtitle: "Добавлять субтитр на картинку"
+			includeImageSubtitle: "Добавлять субтитр на картинку",
+			HighlightDecks: "Названия колод подсветки",
+			HighlightWordField: "Поле подсветки",
+			refreshAnkiHighlighterBtn: "Обновить подсвеченные слова"
         }
     },
     en: {
@@ -78,7 +81,10 @@ const i18n = {
 			audioField: "Audio sentence Field:",
 			ssWebp: "Animated WebP",
 			closeSettings: "Close",
-			includeImageSubtitle: "Add subtitle to image"
+			includeImageSubtitle: "Add subtitle to image",
+			HighlightDecks: "Highlight Decks name",
+			HighlightWordField: "Highlight Word Field",
+			refreshAnkiHighlighterBtn: "Refresh Highlight Words"
         }
     },
     ja: {
@@ -119,7 +125,11 @@ const i18n = {
 			audioField: "音声文フィールド:",
 			ssWebp: "アニメーションWebP",	
 			closeSettings: "閉じる",
-			includeImageSubtitle: "画像に字幕を追加"			
+			includeImageSubtitle: "画像に字幕を追加",
+			HighlightDecks: "ハイライトデッキ名",
+			HighlightWordField: "ハイライトワードフィールド",
+			refreshAnkiHighlighterBtn: "更新 強調表示された単語"
+			
         }
     }
 };
