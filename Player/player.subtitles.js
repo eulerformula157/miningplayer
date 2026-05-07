@@ -1,3 +1,5 @@
+// parsing
+
 function parseSRT(data) {
     data = data.replace(/\r/g, "").trim();
     const blocks = data.split("\n\n");
@@ -48,4 +50,180 @@ function formatTime(t) {
     const seconds = Math.floor(t % 60);
     const milliseconds = Math.floor((t % 1) * 1000);
     return `${minutes}:${seconds.toString().padStart(2, "0")}.${milliseconds.toString().padStart(3, "0")}`;
+}
+
+// state helpers
+
+function getCurrentSubtitle() {
+    const t = video.currentTime - globalSubDelay;
+    return subtitles.find((s) => t >= s.start && t <= s.end);
+}
+
+
+// rendering
+
+function renderSubtitles() {
+    sidebar.innerHTML = "";
+    subtitleElements = [];
+    subtitles.forEach((sub, idx) => {
+		
+		const div = document.createElement("div");
+		div.className = "subtitle";
+
+		const timeContainer = document.createElement("div");
+		timeContainer.className = "time-container";
+		timeContainer.style.display = "flex";
+		timeContainer.style.justifyContent = "space-between";
+		timeContainer.style.fontSize = "14px";
+		timeContainer.style.color = "#888";
+		timeContainer.style.marginBottom = "10px";
+
+		const startTime = document.createElement("span");
+		startTime.textContent = formatTime(sub.start + globalSubDelay);
+
+		const endTime = document.createElement("span");
+		endTime.textContent = formatTime(sub.end + globalSubDelay);
+
+		timeContainer.appendChild(startTime);
+		timeContainer.appendChild(endTime);
+
+		const textContent = document.createElement("div");
+		textContent.className = "text-content";
+		textContent.textContent = sub.text;
+
+		div.appendChild(timeContainer);
+		div.appendChild(textContent);
+		
+        div.onclick = () => {
+            if (lastClickedSubtitleIdx === idx) {
+                if (video.paused) video.play();
+                else {
+                    video.pause();
+                    video.currentTime = sub.start + globalSubDelay + 0.05;
+                }
+            } else {
+                video.pause();
+                lastClickedSubtitleIdx = idx;
+                syncSubtitleStyle(idx);
+				video.currentTime = sub.start + globalSubDelay + 0.05;
+				renderSubtitleOverlay({
+					overlay,
+					text: sub.text
+				});
+            }
+            updatePlayButton();
+        };
+        sidebar.appendChild(div);
+        subtitleElements.push({ div, sub });
+    });
+}
+
+// navigation
+
+function seekBySubtitle(offset) {
+    if (!subtitles.length) return;
+    const t = video.currentTime;
+    let currentIdx = subtitles.findIndex((s) => t >= s.start && t <= s.end);
+    if (currentIdx === -1) {
+        currentIdx = offset > 0 ? subtitles.findIndex((s) => s.start > t) : subtitles.filter((s) => s.end < t).length - 1;
+    } else {
+        currentIdx += offset;
+    }
+    currentIdx = Math.max(0, Math.min(subtitles.length - 1, currentIdx));
+    const targetSub = subtitles[currentIdx];
+    video.pause();
+    video.currentTime = targetSub.start + 0.05;
+	renderSubtitleOverlay({
+		overlay,
+		text: targetSub.text
+	});
+    syncSubtitleStyle(currentIdx);
+}
+
+function syncSubtitleStyle(idx) {
+    lastClickedSubtitleIdx = idx;
+    subtitleElements.forEach(({ div }, i) => {
+        if (i === idx) {
+            div.classList.add("active");
+            div.scrollIntoView({ behavior: "smooth", block: "center" });
+        } else {
+            div.classList.remove("active");
+        }
+    });
+}
+
+// new
+
+function clearSubtitleOverlay(overlayEl) {
+    if (!overlayEl) return;
+    overlayEl.textContent = "";
+}
+
+function getSubtitleStatusSettings(highlighter, status) {
+    if (!highlighter || !highlighter.statusSettings) return null;
+    return highlighter.statusSettings[status] || null;
+}
+
+function appendPlainSubtitleText(overlayEl, text) {
+    overlayEl.textContent = text || "";
+}
+
+function appendHighlightedToken(overlayEl, token, status, settings) {
+    const span = document.createElement("span");
+    span.className = `subtitle-word subtitle-word-${status || "unknown"}`;
+    span.textContent = token;
+
+    if (settings?.color) {
+        span.style.color = settings.color;
+    }
+
+    overlayEl.appendChild(span);
+}
+
+function tokenizeSubtitleForHighlighting(text) {
+    // MVP-токенизация: сохраняем пробелы и пунктуацию отдельными токенами.
+    // Позже сюда можно подключить японский tokenizer или matching по выражениям.
+    return String(text || "").match(/(\s+|[^\s]+)/g) || [];
+}
+
+function renderHighlightedSubtitleOverlay(overlayEl, text, highlighter) {
+    const tokens = tokenizeSubtitleForHighlighting(text);
+
+    for (const token of tokens) {
+        const isWhitespace = /^\s+$/.test(token);
+
+        if (isWhitespace) {
+            overlayEl.appendChild(document.createTextNode(token));
+            continue;
+        }
+
+        const status = highlighter.getStatusForTextToken?.(token) || "unknown";
+        const settings = getSubtitleStatusSettings(highlighter, status);
+
+        if (!settings || settings.enabled === false) {
+            overlayEl.appendChild(document.createTextNode(token));
+            continue;
+        }
+
+        appendHighlightedToken(overlayEl, token, status, settings);
+    }
+}
+
+function renderSubtitleOverlay(options) {
+    const overlay = options.overlay;
+    const text = options.text;
+    const highlighter = options.highlighter || null;
+
+    if (!overlay) return;
+
+    clearSubtitleOverlay(overlay);
+
+    if (!text) return;
+
+    if (!highlighter || highlighter.enabled !== true) {
+        appendPlainSubtitleText(overlay, text);
+        return;
+    }
+
+    renderHighlightedSubtitleOverlay(overlay, text, highlighter);
 }

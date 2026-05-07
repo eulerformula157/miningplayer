@@ -39,81 +39,17 @@ nextSubBtn.onclick = () => seekBySubtitle(1);
 const volume = document.getElementById("volume");
 video.volume = volume.value;
 
-function renderSubtitles() {
-    sidebar.innerHTML = "";
-    subtitleElements = [];
-    subtitles.forEach((sub, idx) => {
-		
-		const div = document.createElement("div");
-		div.className = "subtitle";
-
-		const timeContainer = document.createElement("div");
-		timeContainer.className = "time-container";
-		timeContainer.style.display = "flex";
-		timeContainer.style.justifyContent = "space-between";
-		timeContainer.style.fontSize = "14px";
-		timeContainer.style.color = "#888";
-		timeContainer.style.marginBottom = "10px";
-
-		const startTime = document.createElement("span");
-		startTime.textContent = formatTime(sub.start + globalSubDelay);
-
-		const endTime = document.createElement("span");
-		endTime.textContent = formatTime(sub.end + globalSubDelay);
-
-		timeContainer.appendChild(startTime);
-		timeContainer.appendChild(endTime);
-
-		const textContent = document.createElement("div");
-		textContent.className = "text-content";
-		textContent.textContent = sub.text;
-
-		div.appendChild(timeContainer);
-		div.appendChild(textContent);
-		
-        div.onclick = () => {
-            if (lastClickedSubtitleIdx === idx) {
-                if (video.paused) video.play();
-                else {
-                    video.pause();
-                    video.currentTime = sub.start + globalSubDelay + 0.05;
-                }
-            } else {
-                video.pause();
-                lastClickedSubtitleIdx = idx;
-                syncSubtitleStyle(idx);
-				video.currentTime = sub.start + globalSubDelay + 0.05;
-				overlay.textContent = sub.text;
-            }
-            updatePlayButton();
-        };
-        sidebar.appendChild(div);
-        subtitleElements.push({ div, sub });
-    });
-}
-
-function getCurrentSubtitle() {
-    const t = video.currentTime - globalSubDelay;
-    return subtitles.find((s) => t >= s.start && t <= s.end);
-}
-
-function syncSubtitleStyle(idx) {
-    lastClickedSubtitleIdx = idx;
-    subtitleElements.forEach(({ div }, i) => {
-        if (i === idx) {
-            div.classList.add("active");
-            div.scrollIntoView({ behavior: "smooth", block: "center" });
-        } else {
-            div.classList.remove("active");
-        }
-    });
-}
-
 video.addEventListener("timeupdate", () => {
     const sub = getCurrentSubtitle();
-    overlay.textContent = sub ? sub.text : "";
+
+    renderSubtitleOverlay({
+        overlay,
+        text: sub ? sub.text : ""
+    });
+
     progress.value = (video.currentTime / video.duration) * 100 || 0;
     timeLabel.textContent = `${formatTime(video.currentTime)} / ${formatTime(video.duration)}`;
+
     if (!video.paused && sub) {
         const idx = subtitles.indexOf(sub);
         syncSubtitleStyle(idx);
@@ -135,15 +71,20 @@ async function handleFiles(files) {
         }
     }
 
-    if (videoFile) {
-        if (!hasSubtitles) {
-            subtitles = [];
-            overlay.textContent = "";
-        }
-        video.src = URL.createObjectURL(videoFile);
-        dropzone.classList.add("hidden");
-        uploadVideoInBackground(videoFile);
-    }
+	if (videoFile) {
+		if (!hasSubtitles) {
+			subtitles = [];
+
+			renderSubtitleOverlay({
+				overlay,
+				text: ""
+			});
+		}
+
+		video.src = URL.createObjectURL(videoFile);
+		dropzone.classList.add("hidden");
+		uploadVideoInBackground(videoFile);
+	}
 
     renderSubtitles();
 }
@@ -267,23 +208,6 @@ videoContainer.addEventListener("mousemove", (e) => {
     controls.style.opacity = isBottom ? "1" : "0";
     controls.style.pointerEvents = isBottom ? "auto" : "none";
 });
-
-function seekBySubtitle(offset) {
-    if (!subtitles.length) return;
-    const t = video.currentTime;
-    let currentIdx = subtitles.findIndex((s) => t >= s.start && t <= s.end);
-    if (currentIdx === -1) {
-        currentIdx = offset > 0 ? subtitles.findIndex((s) => s.start > t) : subtitles.filter((s) => s.end < t).length - 1;
-    } else {
-        currentIdx += offset;
-    }
-    currentIdx = Math.max(0, Math.min(subtitles.length - 1, currentIdx));
-    const targetSub = subtitles[currentIdx];
-    video.pause();
-    video.currentTime = targetSub.start + 0.05;
-    overlay.textContent = targetSub.text;
-    syncSubtitleStyle(currentIdx);
-}
 
 const FRAME_STEP_SECONDS = 1 / 30;
 
