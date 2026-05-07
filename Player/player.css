@@ -472,3 +472,87 @@ video {
   text-transform: uppercase;
   cursor: pointer;
 }
+
+.note-dropdown {
+  position: relative;
+  width: 58px;
+  min-width: 58px;
+  max-width: 58px;
+  flex: 0 0 58px;
+}
+
+.note-dropdown-btn {
+  width: 58px !important;
+  min-width: 58px !important;
+  max-width: 58px !important;
+  overflow: hidden;
+  justify-content: space-between !important;
+  gap: 4px;
+  padding: 0 6px !important;
+}
+
+#targetNoteButtonText {
+  display: inline-block;
+  max-width: 34px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: clip;
+}
+
+.note-dropdown-btn:hover #targetNoteButtonText.is-overflowing {
+  animation: noteTextScroll 4s linear infinite;
+}
+
+.note-dropdown-arrow {
+  flex: 0 0 auto;
+  font-size: 9px;
+  color: #aaa;
+}
+
+.note-dropdown-menu {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 0;
+  width: 220px;
+  max-height: 260px;
+  overflow-y: auto;
+  background: #222;
+  border: 1px solid #555;
+  border-radius: 5px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.65);
+  z-index: 10000;
+  padding: 4px;
+}
+
+.note-dropdown-menu.hidden {
+  display: none;
+}
+
+.note-dropdown-item {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 7px 9px;
+  border-radius: 4px;
+  color: white;
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.note-dropdown-item:hover,
+.note-dropdown-item.active {
+  background: #3a254f;
+  color: #d7b5ff;
+}
+
+@keyframes noteTextScroll {
+  0%, 15% {
+    transform: translateX(0);
+  }
+
+  85%, 100% {
+    transform: translateX(calc(34px - 100%));
+  }
+}

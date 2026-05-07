@@ -143,9 +143,19 @@
     </div>
  
 <div class="mining-row">
-  <select id="targetNoteSelect" title="Target Anki card">
-    <option value="" data-i18n="lastAdded" title="Last added card">🕘</option>
-  </select>
+
+	<div id="targetNoteDropdown" class="note-dropdown">
+	  <button id="targetNoteButton" type="button" class="note-dropdown-btn" title="Last added card">
+		<span id="targetNoteButtonText">🕘</span>
+		<span class="note-dropdown-arrow">▾</span>
+	  </button>
+
+	  <div id="targetNoteMenu" class="note-dropdown-menu hidden"></div>
+	</div>
+
+	<select id="targetNoteSelect" hidden>
+	  <option value="" data-i18n="lastAdded" title="Last added card">🕘</option>
+	</select>
 
   <button id="ankiAllBtn" class="primary-action" data-i18n="updateCard">
     Update Card

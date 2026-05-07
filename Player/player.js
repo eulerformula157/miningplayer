@@ -433,9 +433,103 @@ async function refreshTargetNoteList({ preserveSelection = true } = {}) {
         } else {
             targetNoteSelect.value = "";
         }
+
+        updateTargetNoteButtonText();
+        rebuildTargetNoteMenu();
     } catch (err) {
         console.error("Could not load deck notes:", err);
+        updateTargetNoteButtonText();
+        rebuildTargetNoteMenu();
     }
+}
+
+function getTargetNoteDropdownEls() {
+    return {
+        dropdown: document.getElementById("targetNoteDropdown"),
+        button: document.getElementById("targetNoteButton"),
+        buttonText: document.getElementById("targetNoteButtonText"),
+        menu: document.getElementById("targetNoteMenu")
+    };
+}
+
+function updateTargetNoteButtonText() {
+    const { button, buttonText } = getTargetNoteDropdownEls();
+    if (!button || !buttonText || !targetNoteSelect) return;
+
+    const selectedOption = targetNoteSelect.selectedOptions[0];
+    const text = selectedOption?.textContent || "🕘";
+    const title = selectedOption?.title || text;
+
+    buttonText.textContent = text;
+    button.title = title;
+
+    requestAnimationFrame(() => {
+        buttonText.classList.toggle(
+            "is-overflowing",
+            buttonText.scrollWidth > buttonText.clientWidth
+        );
+    });
+}
+
+function rebuildTargetNoteMenu() {
+    const { menu } = getTargetNoteDropdownEls();
+    if (!menu || !targetNoteSelect) return;
+
+    menu.innerHTML = "";
+
+    Array.from(targetNoteSelect.options).forEach((option) => {
+        const item = document.createElement("div");
+        item.className = "note-dropdown-item";
+        item.textContent = option.textContent;
+        item.title = option.title || option.textContent;
+        item.dataset.value = option.value;
+
+        if (option.value === targetNoteSelect.value) {
+            item.classList.add("active");
+        }
+
+        item.addEventListener("click", () => {
+            targetNoteSelect.value = option.value;
+            targetNoteSelect.dispatchEvent(new Event("change"));
+
+            menu.classList.add("hidden");
+            updateTargetNoteButtonText();
+            rebuildTargetNoteMenu();
+        });
+
+        menu.appendChild(item);
+    });
+}
+
+function initTargetNoteDropdown() {
+    const { button, menu } = getTargetNoteDropdownEls();
+    if (!button || !menu) return;
+
+    button.addEventListener("click", (e) => {
+        e.stopPropagation();
+        menu.classList.toggle("hidden");
+
+        if (!menu.classList.contains("hidden")) {
+            refreshTargetNoteList({ preserveSelection: true });
+        }
+    });
+
+    document.addEventListener("click", (e) => {
+        const { dropdown, menu } = getTargetNoteDropdownEls();
+        if (!dropdown || !menu) return;
+
+        if (!dropdown.contains(e.target)) {
+            menu.classList.add("hidden");
+        }
+    });
+
+    targetNoteSelect?.addEventListener("change", () => {
+        updateTargetNoteButtonText();
+        rebuildTargetNoteMenu();
+    });
+
+    updateTargetNoteButtonText();
+    rebuildTargetNoteMenu();
 }
 
 document.addEventListener("keydown", (e) => {
@@ -662,8 +756,9 @@ document.addEventListener("fullscreenchange", () => {
 });
 
 window.addEventListener("load", () => {
+    initTargetNoteDropdown();
     refreshTargetNoteList({ preserveSelection: true });
-    updateFullscreenButtonText();
+    updateIconButtons();
 });
 
 document.addEventListener("visibilitychange", () => {
