@@ -408,11 +408,19 @@ async function refreshTargetNoteList({ preserveSelection = true } = {}) {
 
 	targetNoteSelect.title = i18n[currentLang].dict.lastAddedTitle || "Last added card";
 
-	if (!ankiUrl || !deckName) return;
+	if (!ankiUrl || !deckName) {
+		updateTargetNoteButtonText();
+		rebuildTargetNoteMenu();
+		return;
+	}
 
     try {
         const ids = await fetchDeckNoteIds(ankiUrl, deckName);
-        if (!ids.length) return;
+		if (!ids.length) {
+			updateTargetNoteButtonText();
+			rebuildTargetNoteMenu();
+			return;
+		}
 
         const recentIds = ids.slice(-50).reverse();
         const infoList = await fetchNotesInfo(ankiUrl, recentIds);
@@ -453,22 +461,46 @@ function getTargetNoteDropdownEls() {
 }
 
 function updateTargetNoteButtonText() {
-    const { button, buttonText } = getTargetNoteDropdownEls();
+    const { dropdown, button, buttonText } = getTargetNoteDropdownEls();
     if (!button || !buttonText || !targetNoteSelect) return;
 
     const selectedOption = targetNoteSelect.selectedOptions[0];
-    const text = selectedOption?.textContent || "🕘";
+
+    const text = selectedOption?.title || selectedOption?.textContent || "🕘";
     const title = selectedOption?.title || text;
 
     buttonText.textContent = text;
     button.title = title;
 
     requestAnimationFrame(() => {
-        buttonText.classList.toggle(
-            "is-overflowing",
-            buttonText.scrollWidth > buttonText.clientWidth
-        );
+        const textWidth = buttonText.scrollWidth;
+        const visibleWidth = 42;
+
+        buttonText.classList.toggle("is-overflowing", textWidth > visibleWidth);
+
+        if (dropdown) {
+            dropdown.style.setProperty("--note-text-width", `${visibleWidth}px`);
+        }
     });
+}
+
+function updateTargetNoteMenuWidth() {
+    const { dropdown } = getTargetNoteDropdownEls();
+    if (!dropdown || !targetNoteSelect) return;
+
+    const canvas = updateTargetNoteMenuWidth.canvas || document.createElement("canvas");
+    updateTargetNoteMenuWidth.canvas = canvas;
+
+    const ctx = canvas.getContext("2d");
+    ctx.font = "12px sans-serif";
+
+    const longest = Array.from(targetNoteSelect.options).reduce((max, option) => {
+        const text = option.title || option.textContent || "";
+        return Math.max(max, ctx.measureText(text).width);
+    }, 0);
+
+    const width = Math.ceil(Math.min(Math.max(longest + 36, 90), 420));
+    dropdown.style.setProperty("--note-menu-width", `${width}px`);
 }
 
 function rebuildTargetNoteMenu() {
@@ -498,7 +530,10 @@ function rebuildTargetNoteMenu() {
         });
 
         menu.appendChild(item);
+		
     });
+	
+	updateTargetNoteMenuWidth();
 }
 
 function initTargetNoteDropdown() {

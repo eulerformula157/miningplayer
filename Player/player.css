@@ -159,18 +159,6 @@ video {
   flex-shrink: 0;
 }
 
-#targetNoteSelect {
-  width: 54px;
-  min-width: 54px;
-  max-width: 54px;
-  flex: 0 0 72px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  padding-left: 8px;
-  padding-right: 22px;
-}
-
 #ankiAllBtn {
   padding: 0 12px;
 }
@@ -473,35 +461,6 @@ video {
   cursor: pointer;
 }
 
-.note-dropdown {
-  position: relative;
-  width: 58px;
-  min-width: 58px;
-  max-width: 58px;
-  flex: 0 0 58px;
-}
-
-.note-dropdown-btn {
-  width: 58px !important;
-  min-width: 58px !important;
-  max-width: 58px !important;
-  overflow: hidden;
-  justify-content: space-between !important;
-  gap: 4px;
-  padding: 0 6px !important;
-}
-
-#targetNoteButtonText {
-  display: inline-block;
-  max-width: 34px;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: clip;
-}
-
-.note-dropdown-btn:hover #targetNoteButtonText.is-overflowing {
-  animation: noteTextScroll 4s linear infinite;
-}
 
 .note-dropdown-arrow {
   flex: 0 0 auto;
@@ -509,11 +468,79 @@ video {
   color: #aaa;
 }
 
+.note-dropdown-menu.hidden {
+  display: none;
+}
+
+.note-dropdown-item {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 7px 9px;
+  border-radius: 4px;
+  color: white;
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.note-dropdown-item:hover,
+.note-dropdown-item.active {
+  background: #3a254f;
+  color: #d7b5ff;
+}
+
+.note-dropdown {
+  --note-button-width: 64px;
+  --note-menu-width: 220px;
+  --note-text-width: 42px;
+
+  position: relative;
+  width: var(--note-button-width);
+  min-width: var(--note-button-width);
+  max-width: var(--note-button-width);
+  flex: 0 0 var(--note-button-width);
+}
+
+.note-dropdown-btn {
+  width: var(--note-button-width) !important;
+  min-width: var(--note-button-width) !important;
+  max-width: var(--note-button-width) !important;
+  overflow: hidden;
+  justify-content: flex-start !important;
+  gap: 4px;
+  padding: 0 18px 0 7px !important;
+  position: relative;
+}
+
+#targetNoteButtonText {
+  display: inline-block;
+  white-space: nowrap;
+  line-height: 1;
+  transform: translateX(0);
+}
+
+.note-dropdown-btn:hover #targetNoteButtonText.is-overflowing {
+  animation: noteTextScroll 4s linear infinite;
+}
+
+.note-dropdown-arrow {
+  position: absolute;
+  right: 7px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 9px;
+  color: #aaa;
+  pointer-events: none;
+}
+
 .note-dropdown-menu {
   position: absolute;
   bottom: calc(100% + 6px);
   left: 0;
-  width: 220px;
+  width: var(--note-menu-width);
+  max-width: min(420px, 80vw);
   max-height: 260px;
   overflow-y: auto;
   background: #222;
@@ -553,6 +580,6 @@ video {
   }
 
   85%, 100% {
-    transform: translateX(calc(34px - 100%));
+    transform: translateX(calc(var(--note-text-width) - 100%));
   }
 }
