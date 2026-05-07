@@ -677,6 +677,7 @@ def save_anki_highlight_cache(cache_key):
 
     return jsonify({"success": True})
 
+
 @app.route("/known-basic-words", methods=["GET"])
 def get_known_basic_words():
     words_path = BASE_DIR / "known-basic-words.json"
