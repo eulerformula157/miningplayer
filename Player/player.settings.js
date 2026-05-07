@@ -58,7 +58,9 @@ function saveSettings() {
 		highlightColorYoung: document.getElementById("highlightColorYoung")?.value || "#66ccff",
 		highlightColorMature: document.getElementById("highlightColorMature")?.value || "#88ff88",
 		highlightColorSuspended: document.getElementById("highlightColorSuspended")?.value || "#999999",
-		highlightColorUnknown: document.getElementById("highlightColorUnknown")?.value || "#ffffff"
+		highlightColorUnknown: document.getElementById("highlightColorUnknown")?.value || "#ffffff",
+		highlightDeckNames: document.getElementById("highlightDeckNames")?.value || "",
+		highlightWordField: document.getElementById("highlightWordField")?.value || "Word"		
 		
     };
     localStorage.setItem("subtitlePlayerSettings", JSON.stringify(settings));
@@ -117,6 +119,16 @@ function loadSettings() {
 	const highlightColorUnknown = document.getElementById("highlightColorUnknown");
 	if (highlightColorUnknown) {
 		highlightColorUnknown.value = settings.highlightColorUnknown || "#ffffff";
+	}
+
+	const highlightDeckNames = document.getElementById("highlightDeckNames");
+	if (highlightDeckNames) {
+		highlightDeckNames.value = settings.highlightDeckNames || "";
+	}
+
+	const highlightWordField = document.getElementById("highlightWordField");
+	if (highlightWordField) {
+		highlightWordField.value = settings.highlightWordField || "Word";
 	}
 
     const mapping = {

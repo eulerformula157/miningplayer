@@ -739,16 +739,12 @@ const deckNameInput = document.getElementById("deckName");
 const highlightWordFieldInput = document.getElementById("highlightWordField");
 const highlightDeckNamesInput = document.getElementById("highlightDeckNames");
 
-[ankiUrlInput, deckNameInput, highlightWordFieldInput, highlightDeckNamesInput].forEach((input) => {
+[ankiUrlInput, deckNameInput].forEach((input) => {
     input?.addEventListener("input", () => {
         clearTimeout(deckNoteRefreshTimer);
 
         deckNoteRefreshTimer = setTimeout(() => {
             refreshTargetNoteList({ preserveSelection: true });
-
-            refreshAnkiWordStatuses().catch((err) => {
-                console.error("Anki highlighter refresh failed:", err);
-            });
         }, 500);
     });
 });
@@ -775,6 +771,13 @@ window.addEventListener("load", () => {
             console.error("Anki highlighter load failed:", err);
         });
     }, 300);
+});
+
+document.getElementById("refreshAnkiHighlighterBtn")?.addEventListener("click", () => {
+    refreshAnkiWordStatuses().catch((err) => {
+        console.error("Anki highlighter refresh failed:", err);
+        alert("Anki highlighter refresh failed: " + err.message);
+    });
 });
 
 document.addEventListener("visibilitychange", () => {

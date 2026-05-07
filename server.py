@@ -36,6 +36,7 @@ DEFAULT_BASE_DIR = Path(__file__).resolve().parent
 BASE_DIR = Path(os.getenv("PLAYER_SERVER_BASE_DIR", str(DEFAULT_BASE_DIR))).resolve()
 PLAYER_DIR = BASE_DIR / "Player"
 VIDEO_DIR = BASE_DIR / "UploadedVideos"
+ANKI_HIGHLIGHT_CACHE_DIR = BASE_DIR / "anki_highlight_cache"
 
 anki_media_dir_raw = os.getenv("ANKI_MEDIA_DIR")
 
@@ -54,6 +55,7 @@ DEDUPE_INDEX_PATH = BASE_DIR / "dedupe_index.json"
 
 os.makedirs(VIDEO_DIR, exist_ok=True)
 os.makedirs(SCREENSHOT_DIR, exist_ok=True)
+os.makedirs(ANKI_HIGHLIGHT_CACHE_DIR, exist_ok=True)
 
 last_heartbeat = time.time()
 dedupe_lock = threading.Lock()
@@ -605,6 +607,51 @@ def heartbeat():
 
 # Запускаем поток мониторинга перед app.run()
 #threading.Thread(target=monitor_activity, daemon=True).start()
+
+def _safe_cache_key(raw_key: str) -> str:
+    key = "".join(ch for ch in str(raw_key or "") if ch.isalnum() or ch in ("-", "_"))
+    if not key:
+        raise ValueError("Некорректный cache key")
+    return key
+
+
+@app.route("/anki-highlight-cache/<cache_key>", methods=["GET"])
+def get_anki_highlight_cache(cache_key):
+    try:
+        safe_key = _safe_cache_key(cache_key)
+    except ValueError as err:
+        return jsonify({"error": str(err)}), 400
+
+    cache_path = ANKI_HIGHLIGHT_CACHE_DIR / f"{safe_key}.json"
+
+    if not cache_path.exists():
+        return jsonify({"found": False})
+
+    try:
+        data = json.loads(cache_path.read_text(encoding="utf-8"))
+        return jsonify({"found": True, "data": data})
+    except Exception as err:
+        return jsonify({"error": str(err)}), 500
+
+
+@app.route("/anki-highlight-cache/<cache_key>", methods=["POST"])
+def save_anki_highlight_cache(cache_key):
+    try:
+        safe_key = _safe_cache_key(cache_key)
+    except ValueError as err:
+        return jsonify({"error": str(err)}), 400
+
+    data = request.get_json()
+    if not isinstance(data, dict):
+        return jsonify({"error": "Invalid cache payload"}), 400
+
+    cache_path = ANKI_HIGHLIGHT_CACHE_DIR / f"{safe_key}.json"
+    cache_path.write_text(
+        json.dumps(data, ensure_ascii=False),
+        encoding="utf-8"
+    )
+
+    return jsonify({"success": True})
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT", "5000")))

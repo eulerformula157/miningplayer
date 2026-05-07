@@ -1,5 +1,6 @@
 .env
 UploadedVideos/
+anki_highlight_cache/
 *.mp4
 *.mkv
 *.webm

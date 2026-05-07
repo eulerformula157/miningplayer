@@ -1,4 +1,7 @@
 const ankiWordStatusMap = new Map();
+const MAX_HIGHLIGHT_CARDS = 50000;
+const ANKI_HIGHLIGHT_CHUNK_SIZE = 100;
+const ANKI_HIGHLIGHT_CACHE_TTL_MS = 12 * 60 * 60 * 1000; // 12 hours
 
 function getCardStatus(card) {
     if (card.queue === -1) return "suspended";
@@ -72,88 +75,127 @@ function normalizeHighlightWord(value) {
         .trim();
 }
 
-async function refreshAnkiWordStatuses() {
-	const ankiUrl = document.getElementById("ankiUrl")?.value?.trim();
-	const deckNames = getHighlightDeckNames();
-	const wordFields = getHighlightWordFieldNames();
+function makeAnkiHighlightCacheKey({ deckNames, wordFields, maxCards }) {
+    const raw = JSON.stringify({
+        deckNames,
+        wordFields,
+        maxCards
+    });
 
-console.log("Anki highlighter deckName:", deckName);
-console.log("Anki highlighter wordFields:", wordFields);
+    let hash = 0;
+
+    for (let i = 0; i < raw.length; i += 1) {
+        hash = ((hash << 5) - hash) + raw.charCodeAt(i);
+        hash |= 0;
+    }
+
+    return `anki_highlight_${Math.abs(hash)}`;
+}
+
+async function refreshAnkiWordStatuses() {
+    const ankiUrl = document.getElementById("ankiUrl")?.value?.trim();
+    const deckNames = getHighlightDeckNames();
+    const wordFields = getHighlightWordFieldNames();
+	
+	const cacheKey = makeAnkiHighlightCacheKey({
+		deckNames,
+		wordFields,
+		maxCards: MAX_HIGHLIGHT_CARDS
+	});
+
+	if (await loadAnkiHighlightCache(cacheKey)) {
+		return;
+	}	
+
+    console.log("Anki highlighter deckNames:", deckNames);
+    console.log("Anki highlighter wordFields:", wordFields);
 
     ankiWordStatusMap.clear();
 
-    if (!ankiUrl || !deckName.length || !wordFields.length) {
-        console.warn("Anki highlighter: missing ankiUrl, deckName, or word field");
+    if (!ankiUrl || !deckNames.length || !wordFields.length) {
+        console.warn("Anki highlighter: missing ankiUrl, highlight decks, or word field");
         return;
     }
 
 	const deckQuery = deckNames
-		.flatMap((deck) => [
-			`deck:"${deck}"`,
-			`deck:"${deck}::*"`
-		])
+		.map((deck) => `deck:"${deck}"`)
 		.join(" OR ");
 
-	const cards = await ankiRequest(
-		ankiUrl,
-		"findCards",
-		{ query: deckQuery }
-	);
+    const cards = await ankiRequest(
+        ankiUrl,
+        "findCards",
+        { query: deckQuery }
+    );
 
-	console.log("Anki highlighter decks:", deckNames);
-	console.log("Anki highlighter query:", deckQuery);
-	console.log("Anki findCards result:", cards);
+
+	if (cards.length > MAX_HIGHLIGHT_CARDS) {
+		console.warn(
+			`Anki highlighter: too many cards (${cards.length}). Limiting to ${MAX_HIGHLIGHT_CARDS}.`
+		);
+	}
+
+	const limitedCards = cards.slice(0, MAX_HIGHLIGHT_CARDS);
+
+    console.log("Anki highlighter decks:", deckNames);
+    console.log("Anki highlighter query:", deckQuery);
+	console.log("Anki findCards count:", cards.length);
 
     if (!cards.length) {
         console.warn("Anki highlighter: no cards found");
         return;
     }
 
-    const cardsInfo = await ankiRequest(
-        ankiUrl,
-        "cardsInfo",
-        { cards }
-    );
+	const noteStatusMap = new Map();
 
-    const noteStatusMap = new Map();
+	await ankiRequestChunked(
+		ankiUrl,
+		"cardsInfo",
+		"cards",
+		limitedCards,
+		async (cardsInfo) => {
+			for (const card of cardsInfo) {
+				const noteId = Number(card.note);
+				const status = getCardStatus(card);
+				const prev = noteStatusMap.get(noteId);
 
-    for (const card of cardsInfo) {
-        const noteId = Number(card.note);
-        const status = getCardStatus(card);
-        const prev = noteStatusMap.get(noteId);
-
-        noteStatusMap.set(noteId, pickBetterStatus(prev, status));
-    }
+				noteStatusMap.set(noteId, pickBetterStatus(prev, status));
+			}
+		}
+	);
 
     const noteIds = [...noteStatusMap.keys()];
 
-    const notesInfo = await ankiRequest(
-        ankiUrl,
-        "notesInfo",
-        { notes: noteIds }
-    );
+	await ankiRequestChunked(
+		ankiUrl,
+		"notesInfo",
+		"notes",
+		noteIds,
+		async (notesInfo) => {
+			for (const note of notesInfo) {
+				const status = noteStatusMap.get(Number(note.noteId)) || "unknown";
 
-    for (const note of notesInfo) {
-        const status = noteStatusMap.get(Number(note.noteId)) || "unknown";
+				for (const fieldName of wordFields) {
+					const rawValue = note.fields?.[fieldName]?.value;
+					const word = normalizeHighlightWord(rawValue);
 
-        for (const fieldName of wordFields) {
-            const rawValue = note.fields?.[fieldName]?.value;
-            const word = normalizeHighlightWord(rawValue);
+					if (!word) continue;
 
-            if (!word) continue;
+					const prev = ankiWordStatusMap.get(word)?.status;
 
-            const prev = ankiWordStatusMap.get(word)?.status;
-
-            ankiWordStatusMap.set(word, {
-                status: pickBetterStatus(prev, status),
-                noteId: note.noteId
-            });
-        }
-    }
+					ankiWordStatusMap.set(word, {
+						status: pickBetterStatus(prev, status),
+						noteId: note.noteId
+					});
+				}
+			}
+		}
+	);
 
 	console.log(
 		`Anki highlighter loaded ${ankiWordStatusMap.size} words from ${deckNames.length} deck(s): ${deckNames.join(", ")}`
 	);
+	
+	await saveAnkiHighlightCache(cacheKey);
 	
 	rerenderCurrentSubtitleWithAnkiHighlighter();
 	
@@ -219,3 +261,89 @@ const ankiSubtitleHighlighter = {
         return findAnkiMatchesInText(text);
     }
 };
+
+async function saveAnkiHighlightCache(cacheKey) {
+    const payload = {
+        createdAt: Date.now(),
+        entries: [...ankiWordStatusMap.entries()]
+    };
+
+    try {
+        const { response, data } = await apiJson(
+            `/anki-highlight-cache/${encodeURIComponent(cacheKey)}`,
+            {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload)
+            }
+        );
+
+        if (!response.ok || data.error) {
+            throw new Error(data.error || "Cache save failed");
+        }
+
+        console.log(`Anki highlighter server cache saved: ${ankiWordStatusMap.size} words`);
+    } catch (err) {
+        console.warn("Anki highlighter server cache save failed:", err);
+    }
+}
+
+async function loadAnkiHighlightCache(cacheKey) {
+    try {
+        const { response, data } = await apiJson(
+            `/anki-highlight-cache/${encodeURIComponent(cacheKey)}`
+        );
+
+        if (!response.ok || !data.found) return false;
+
+        const payload = data.data;
+
+        if (!payload.createdAt || !Array.isArray(payload.entries)) {
+            return false;
+        }
+
+        const age = Date.now() - payload.createdAt;
+
+        if (age > ANKI_HIGHLIGHT_CACHE_TTL_MS) {
+            console.log("Anki highlighter cache expired");
+            return false;
+        }
+
+        ankiWordStatusMap.clear();
+
+        for (const [word, info] of payload.entries) {
+            ankiWordStatusMap.set(word, info);
+        }
+
+        console.log(`Anki highlighter server cache loaded: ${ankiWordStatusMap.size} words`);
+        rerenderCurrentSubtitleWithAnkiHighlighter();
+
+        return true;
+    } catch (err) {
+        console.warn("Anki highlighter server cache load failed:", err);
+        return false;
+    }
+}
+
+async function ankiRequestChunked(ankiUrl, action, paramName, values, onChunk, chunkSize = ANKI_HIGHLIGHT_CHUNK_SIZE) {
+    const totalChunks = Math.ceil(values.length / chunkSize);
+
+    for (let i = 0; i < values.length; i += chunkSize) {
+        const chunkIndex = Math.floor(i / chunkSize) + 1;
+        const chunk = values.slice(i, i + chunkSize);
+
+        console.log(`Anki highlighter ${action}: chunk ${chunkIndex}/${totalChunks}`);
+
+        const chunkResult = await ankiRequest(
+            ankiUrl,
+            action,
+            { [paramName]: chunk }
+        );
+
+        if (Array.isArray(chunkResult)) {
+            await onChunk(chunkResult, chunkIndex, totalChunks);
+        }
+
+        await new Promise((resolve) => setTimeout(resolve, 20));
+    }
+}
