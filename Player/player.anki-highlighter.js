@@ -54,6 +54,17 @@ function getHighlightWordFieldNames() {
         .filter(Boolean);
 }
 
+function getHighlightDeckNames() {
+    const raw = document.getElementById("highlightDeckNames")?.value
+        || document.getElementById("deckName")?.value
+        || "";
+
+    return raw
+        .split(",")
+        .map((deck) => deck.trim())
+        .filter(Boolean);
+}
+
 function normalizeHighlightWord(value) {
     return String(value || "")
         .replace(/<[^>]*>/g, " ")
@@ -62,28 +73,36 @@ function normalizeHighlightWord(value) {
 }
 
 async function refreshAnkiWordStatuses() {
-    const ankiUrl = document.getElementById("ankiUrl")?.value?.trim();
-    const deckName = document.getElementById("deckName")?.value?.trim();
-    const wordFields = getHighlightWordFieldNames();
+	const ankiUrl = document.getElementById("ankiUrl")?.value?.trim();
+	const deckNames = getHighlightDeckNames();
+	const wordFields = getHighlightWordFieldNames();
 
 console.log("Anki highlighter deckName:", deckName);
 console.log("Anki highlighter wordFields:", wordFields);
 
     ankiWordStatusMap.clear();
 
-    if (!ankiUrl || !deckName || !wordFields.length) {
+    if (!ankiUrl || !deckName.length || !wordFields.length) {
         console.warn("Anki highlighter: missing ankiUrl, deckName, or word field");
         return;
     }
 
+	const deckQuery = deckNames
+		.flatMap((deck) => [
+			`deck:"${deck}"`,
+			`deck:"${deck}::*"`
+		])
+		.join(" OR ");
+
 	const cards = await ankiRequest(
 		ankiUrl,
 		"findCards",
-		{ query: `deck:"${deckName}" OR deck:"${deckName}::*"` }
+		{ query: deckQuery }
 	);
 
-console.log("Anki highlighter query:", `deck:${deckName}`);
-console.log("Anki findCards result:", cards);
+	console.log("Anki highlighter decks:", deckNames);
+	console.log("Anki highlighter query:", deckQuery);
+	console.log("Anki findCards result:", cards);
 
     if (!cards.length) {
         console.warn("Anki highlighter: no cards found");
@@ -132,9 +151,9 @@ console.log("Anki findCards result:", cards);
         }
     }
 
-    console.log(
-        `Anki highlighter loaded ${ankiWordStatusMap.size} words from "${deckName}"`
-    );
+	console.log(
+		`Anki highlighter loaded ${ankiWordStatusMap.size} words from ${deckNames.length} deck(s): ${deckNames.join(", ")}`
+	);
 	
 	rerenderCurrentSubtitleWithAnkiHighlighter();
 	

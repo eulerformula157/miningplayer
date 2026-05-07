@@ -737,8 +737,9 @@ globalSubDelayInput.addEventListener("input", (e) => {
 const ankiUrlInput = document.getElementById("ankiUrl");
 const deckNameInput = document.getElementById("deckName");
 const highlightWordFieldInput = document.getElementById("highlightWordField");
+const highlightDeckNamesInput = document.getElementById("highlightDeckNames");
 
-[ankiUrlInput, deckNameInput, highlightWordFieldInput].forEach((input) => {
+[ankiUrlInput, deckNameInput, highlightWordFieldInput, highlightDeckNamesInput].forEach((input) => {
     input?.addEventListener("input", () => {
         clearTimeout(deckNoteRefreshTimer);
 
