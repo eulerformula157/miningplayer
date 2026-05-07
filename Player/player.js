@@ -665,10 +665,14 @@ ankiAllBtn.onclick = async () => {
                 }
             })
         });
+		
+	await addNoteToAnkiHighlightCache(targetNoteId).catch((err) => {
+		console.warn("Could not update highlight cache for note:", err);
+	});
 
-        alert("Successfully updated card!");
-        if (targetNoteSelect) targetNoteSelect.value = "";
-        refreshTargetNoteList({ preserveSelection: false });
+	alert("Successfully updated card!");
+	if (targetNoteSelect) targetNoteSelect.value = "";
+	refreshTargetNoteList({ preserveSelection: false });
     } catch (err) {
         console.error("Update error:", err);
         alert("Error: " + err.message);
@@ -774,7 +778,7 @@ window.addEventListener("load", () => {
 });
 
 document.getElementById("refreshAnkiHighlighterBtn")?.addEventListener("click", () => {
-    refreshAnkiWordStatuses().catch((err) => {
+    refreshAnkiWordStatuses({ force: true }).catch((err) => {
         console.error("Anki highlighter refresh failed:", err);
         alert("Anki highlighter refresh failed: " + err.message);
     });
