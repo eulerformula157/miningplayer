@@ -468,3 +468,26 @@ details[open] summary::after {
   border-color: #ff4444;
   color: #ff6666;
 }
+
+.settings-checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 16px;
+  color: #aaa;
+  font-size: 12px;
+}
+
+.settings-checkbox-row input[type="checkbox"] {
+  width: auto;
+  margin: 0;
+  accent-color: #9b51e0;
+}
+
+.settings-checkbox-row label {
+  margin: 0;
+  color: #aaa;
+  font-size: 12px;
+  text-transform: uppercase;
+  cursor: pointer;
+}

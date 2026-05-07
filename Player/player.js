@@ -497,6 +497,9 @@ ankiAllBtn.onclick = async () => {
 
     const combinedText = subtitles.slice(currentIdx, endIdx + 1).map((s) => s.text).join(" ");
 
+	const includeImageSubtitle = document.getElementById("includeImageSubtitle")?.checked !== false;
+	const imageSubtitleText = includeImageSubtitle ? combinedText : "";
+
     try {
 		const pictureEndpoint = screenshotMode === "webp"
 			? "/animated-webp"
@@ -507,13 +510,13 @@ ankiAllBtn.onclick = async () => {
 				filename: currentVideoFile,
 				start: audioStart,
 				end: audioEnd,
-				text: combinedText,
+				text: imageSubtitleText,
 				fontSize: document.getElementById("fontSizeRange").value
 			}
 			: {
 				filename: currentVideoFile,
 				time: targetTime,
-				text: combinedText,
+				text: imageSubtitleText,
 				fontSize: document.getElementById("fontSizeRange").value
 			};
 

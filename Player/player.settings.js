@@ -50,7 +50,8 @@ function saveSettings() {
         sidebarWidth: document.getElementById("sidebar").style.width,
 		sentenceField: document.getElementById("sentenceField").value,
 		pictureField: document.getElementById("pictureField").value,
-		audioField: document.getElementById("audioField").value
+		audioField: document.getElementById("audioField").value,
+		includeImageSubtitle: document.getElementById("includeImageSubtitle").checked
     };
     localStorage.setItem("subtitlePlayerSettings", JSON.stringify(settings));
     alert("Settings saved!");
@@ -100,6 +101,11 @@ function loadSettings() {
 
 	const delayEl = document.getElementById("globalSubDelay");
 	if (delayEl) globalSubDelay = parseFloat(delayEl.value) || 0;
+
+	const includeImageSubtitleEl = document.getElementById("includeImageSubtitle");
+	if (includeImageSubtitleEl) {
+		includeImageSubtitleEl.checked = settings.includeImageSubtitle !== false;
+	}
 
 }
 

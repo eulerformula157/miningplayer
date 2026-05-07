@@ -6,5 +6,7 @@ UploadedVideos/
 *.avi
 *.mov
 ankiplayer.bat
+miningplayer.bat
 miningplayer.md
 futuremining.txt
+dedupe_index.json

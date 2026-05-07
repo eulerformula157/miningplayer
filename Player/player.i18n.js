@@ -35,7 +35,8 @@ const i18n = {
 			pictureField: "Поле картинки",
 			audioField: "Поле предложения аудио",
 			ssWebp: "Анимированный WebP",
-			closeSettings: "Закрыть"
+			closeSettings: "Закрыть",
+			includeImageSubtitle: "Добавлять субтитр на картинку"
         }
     },
     en: {
@@ -74,7 +75,8 @@ const i18n = {
 			pictureField: "Picture Field:",
 			audioField: "Audio sentence Field:",
 			ssWebp: "Animated WebP",
-			closeSettings: "Close"
+			closeSettings: "Close",
+			includeImageSubtitle: "Add subtitle to image"
         }
     },
     ja: {
@@ -113,7 +115,8 @@ const i18n = {
 			pictureField: "画像フィールド:",
 			audioField: "音声文フィールド:",
 			ssWebp: "アニメーションWebP",	
-			closeSettings: "閉じる"			
+			closeSettings: "閉じる",
+			includeImageSubtitle: "画像に字幕を追加"			
         }
     }
 };
