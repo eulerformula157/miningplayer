@@ -3,3 +3,5 @@ A vibe-coded ASBPlayer-like video player with built-in tools for adding sentence
 Everything is tuned to my needs.
 
 Project requires installed ffmpeg.
+
+WIP
