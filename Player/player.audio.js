@@ -120,7 +120,7 @@ function getValidatedVolume() {
 }
 
 document.getElementById("previewAudioBtn").addEventListener("click", async () => {
-    if (!currentVideoFile) return alert("Video is not selected!");
+    if (!currentVideoFile) return showToast("Video is not selected: " + err.message, "error", 6000);
 
     const offsetStart = parseFloat(document.getElementById("subOffsetStart").value) || 0;
     const offsetEnd = parseFloat(document.getElementById("subOffsetEnd").value) || 0;
@@ -128,7 +128,7 @@ document.getElementById("previewAudioBtn").addEventListener("click", async () =>
     const volumeLevel = parseFloat(document.getElementById("audioVol").value) || 1;
 
 	const currentIdx = subtitles.findIndex((s) => (video.currentTime - globalSubDelay) >= s.start && (video.currentTime - globalSubDelay) <= s.end);
-	if (currentIdx === -1) return alert("No active subtitle!");
+	if (currentIdx === -1) return showToast("No active subtitle: " + err.message, "error", 6000);
 
     const endIdx = Math.min(currentIdx + depth - 1, subtitles.length - 1);
 	const start = Math.max(0, subtitles[currentIdx].start + globalSubDelay + offsetStart);
@@ -154,7 +154,7 @@ document.getElementById("previewAudioBtn").addEventListener("click", async () =>
             audio.volume = Math.min(1.0, Math.max(0.0, volumeLevel));
             audio.play();
         } else {
-            alert("Server error: " + data.error);
+			showToast("Server error: " + data.error, "error", 6000);
         }
     } catch (err) {
         console.error("Preview failed:", err);

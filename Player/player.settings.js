@@ -64,7 +64,7 @@ function saveSettings() {
 		
     };
     localStorage.setItem("subtitlePlayerSettings", JSON.stringify(settings));
-    alert("Settings saved!");
+    showToast("Settings saved", "success");
 }
 
 function loadSettings() {
