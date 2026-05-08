@@ -24,6 +24,9 @@ const subtitleOverlay = document.getElementById("subtitleOverlay");
 const prevSubBtn = document.getElementById("prevSubBtn");
 const nextSubBtn = document.getElementById("nextSubBtn");
 const resizer = document.getElementById("resizer");
+const videoPickerModal = document.getElementById("videoPickerModal");
+const videoPickerList = document.getElementById("videoPickerList");
+const videoPickerCancelBtn = document.getElementById("videoPickerCancelBtn");
 
 let isResizing = false;
 let subtitles = [];
@@ -1143,39 +1146,111 @@ document.addEventListener("mouseup", () => {
     localStorage.setItem("subtitlePlayerSettings", JSON.stringify(settings));
 });
 
+videoPickerCancelBtn?.addEventListener("click", () => {
+    videoPickerModal?.classList.add("hidden");
+    dropzone.classList.remove("hidden");
+});
+
 async function restoreCurrentVideoFromServer() {
     try {
-        const { data } = await apiJson("/current-video");
+        const { data } = await apiJson("/videos");
 
-        if (!data.filename) {
+        const videos = Array.isArray(data.videos) ? data.videos : [];
+
+        if (!videos.length) {
             dropzone.classList.remove("hidden");
             return;
         }
 
-        currentVideoFile = data.filename;
-
-        video.src = buildApiUrl(`/video/${encodeURIComponent(data.filename)}`);
-        video.load();
-
-        dropzone.classList.add("hidden");
-
-        loadAudioTrackList(data.filename);
-
-        if (data.subtitleFilename) {
-            await restoreSubtitleFromServer(data.subtitleFilename);
-        } else {
-            subtitles = [];
-            renderSubtitles();
-
-            renderSubtitleOverlay({
-                overlay,
-                text: ""
-            });
+        if (videos.length === 1) {
+            await restoreSelectedVideoFromServer(videos[0]);
+            return;
         }
 
+        showVideoPickerModal(videos);
     } catch (err) {
-        console.warn("Could not restore video from server:", err);
+        console.warn("Could not restore videos from server:", err);
         dropzone.classList.remove("hidden");
     }
 }
 
+async function restoreSelectedVideoFromServer(videoInfo) {
+    if (!videoInfo?.filename) {
+        dropzone.classList.remove("hidden");
+        return;
+    }
+
+    currentVideoFile = videoInfo.filename;
+
+    video.src = buildApiUrl(`/video/${encodeURIComponent(videoInfo.filename)}`);
+    video.load();
+
+    dropzone.classList.add("hidden");
+    videoPickerModal?.classList.add("hidden");
+
+    loadAudioTrackList(videoInfo.filename);
+
+    if (videoInfo.subtitleFilename) {
+        await restoreSubtitleFromServer(videoInfo.subtitleFilename);
+    } else {
+        subtitles = [];
+        lastRuntimeSubtitleText = "";
+
+        clearRuntimeWordStatuses?.();
+
+        renderSubtitles();
+
+        renderSubtitleOverlay({
+            overlay,
+            text: ""
+        });
+
+        showToast("Video restored without subtitles", "info", 3000);
+    }
+
+    video.addEventListener("loadedmetadata", () => {
+        console.log("Restored video loaded:", video.duration);
+    }, { once: true });
+
+    video.addEventListener("error", () => {
+        console.error("Video restore failed:", video.error);
+        showToast("Could not load selected video", "error", 5000);
+        dropzone.classList.remove("hidden");
+    }, { once: true });
+}
+
+function showVideoPickerModal(videos) {
+    if (!videoPickerModal || !videoPickerList) {
+        return;
+    }
+
+    videoPickerList.innerHTML = "";
+
+    videos.forEach((videoInfo) => {
+        const item = document.createElement("button");
+        item.type = "button";
+        item.className = "video-picker-item";
+
+        const title = document.createElement("div");
+        title.className = "video-picker-title";
+        title.textContent = videoInfo.filename;
+
+        const subtitle = document.createElement("div");
+        subtitle.className = "video-picker-subtitle";
+        subtitle.textContent = videoInfo.subtitleFilename
+            ? `Subtitle: ${videoInfo.subtitleFilename}`
+            : "No subtitle found";
+
+        item.appendChild(title);
+        item.appendChild(subtitle);
+
+        item.addEventListener("click", () => {
+            restoreSelectedVideoFromServer(videoInfo);
+        });
+
+        videoPickerList.appendChild(item);
+    });
+
+    dropzone.classList.add("hidden");
+    videoPickerModal.classList.remove("hidden");
+}

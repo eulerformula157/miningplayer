@@ -182,7 +182,7 @@ def cleanup_on_startup():
     for f in os.listdir(VIDEO_DIR):
         f_path = os.path.join(VIDEO_DIR, f)
         # Удаляем все, что начинается на temp_ ИЛИ имеет расширение видео
-        if f.startswith("temp_") or f.endswith(('.mp4', '.mkv', '.avi', '.mov', '.webm')):
+        if f.startswith("temp_") or f.endswith(('.mp4', '.mkv', '.avi', '.mov', '.webm', '.srt', '.ass', '.vtt')):
             try:
                 os.remove(f_path)
                 print(f"Удален файл: {f}")
