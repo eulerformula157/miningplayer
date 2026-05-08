@@ -10,15 +10,15 @@
 
 <div id="mpToastContainer" class="mp-toast-container"></div>
 
-<button id="addKnownBasicBtn" class="add-known-basic-btn hidden" type="button">
+<button id="addKnownBasicBtn" class="add-known-basic-btn hidden" type="button" data-i18n="addToKnownBasic">
   Add to known-basic
 </button>
 
-<!--- WIP add custom button for adding card like in yomitan
-<button id="addCardToDeck" class="copy-for-yomitan-btn hidden" type="button">
-  Copy for Yomitan
+<!-- WIP add custom button for adding card like in yomitan
+<button id="addCardToDeck" class="copy-for-yomitan-btn hidden" type="button" data-i18n="addCardToDeck">
+  Add card to deck
 </button>
---->
+-->
 
 <div id="settingsModal" class="hidden">
   <div class="settings-window">
@@ -189,12 +189,14 @@
 
 <div id="videoPickerModal" class="hidden">
   <div class="video-picker-window">
-    <h2>Choose video</h2>
+    <h2 data-i18n="chooseVideo">Choose video</h2>
 
     <div id="videoPickerList" class="video-picker-list"></div>
 
     <div class="video-picker-footer">
-      <button id="videoPickerCancelBtn" type="button">Drop new file</button>
+      <button id="videoPickerCancelBtn" type="button" data-i18n="dropNewFile">
+        Drop new file
+      </button>
     </div>
   </div>
 </div>

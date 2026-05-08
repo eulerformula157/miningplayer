@@ -102,6 +102,19 @@ function showToast(message, type = "info", timeout = 3000) {
   }, timeout);
 }
 
+function t(key, params = {}) {
+    const fallbackDict = i18n?.en?.dict || {};
+    const dictionary = i18n?.[currentLang]?.dict || fallbackDict;
+
+    let text = dictionary[key] || fallbackDict[key] || key;
+
+    for (const [name, value] of Object.entries(params)) {
+        text = text.replaceAll(`{${name}}`, String(value));
+    }
+
+    return text;
+}
+
 function getCleanSelectedText() {
     const selection = window.getSelection();
 
@@ -175,7 +188,7 @@ async function addWordToKnownBasic(word) {
     const cleanWord = String(word || "").trim();
 
     if (!cleanWord) {
-        showToast("No word selected", "error", 3000);
+        showToast(t("toastCopiedForYomitan", { word: cleanWord }), "success", 3000);
         return;
     }
 
@@ -202,12 +215,12 @@ async function addWordToKnownBasic(word) {
         if (data.added) {
             showToast(`Added to known-basic: ${cleanWord}`, "success", 3000);
         } else {
-            showToast(`Already in known-basic: ${cleanWord}`, "info", 3000);
+            showToast(t("toastKnownBasicAlreadyExists", { word: cleanWord }), "info", 3000);
         }
 
     } catch (err) {
         console.error("Known-basic add failed:", err);
-        showToast("Known-basic add failed: " + err.message, "error", 6000);
+        showToast(t("toastKnownBasicAddFailed", { message: err.message }), "error", 6000);
     }
 }
 
@@ -215,7 +228,7 @@ async function copyWordForYomitan(word) {
     const cleanWord = String(word || "").trim();
 
     if (!cleanWord) {
-        showToast("No word selected", "error", 3000);
+        showToast(t("toastCopiedForYomitan", { word: cleanWord }), "success", 3000);
         return;
     }
 
@@ -224,7 +237,7 @@ async function copyWordForYomitan(word) {
         showToast(`Copied for Yomitan: ${cleanWord}`, "success", 3000);
     } catch (err) {
         console.error("Copy for Yomitan failed:", err);
-        showToast("Could not copy word: " + err.message, "error", 5000);
+        showToast(t("toastCopyFailed", { message: err.message }), "error", 5000);
     }
 }
 
@@ -369,7 +382,7 @@ async function uploadVideoInBackground(videoFile, subtitleFile = null) {
 
         if (data.error) {
             console.error("Server upload error:", data.error);
-            showToast("Video upload failed: " + data.error, "error", 5000);
+            showToast(t("toastVideoUploadFailed", { message: data.error }), "error", 5000);
             return;
         }
 
@@ -382,7 +395,7 @@ async function uploadVideoInBackground(videoFile, subtitleFile = null) {
 
     } catch (e) {
         console.error("Upload failed:", e);
-        showToast("Upload failed: " + e.message, "error", 5000);
+        showToast(t("toastVideoUploadFailed", { message: e.message }), "error", 5000);
     }
 }
 
@@ -400,14 +413,14 @@ async function uploadSubtitleInBackground(subtitleFile, videoFilename) {
 
         if (data.error) {
             console.error("Subtitle upload error:", data.error);
-            showToast("Subtitle upload failed: " + data.error, "error", 5000);
+            showToast(t("toastSubtitleUploadFailed", { message: data.error }), "error", 5000);
             return;
         }
 
         console.log("Subtitle uploaded:", data.filename);
     } catch (err) {
         console.error("Subtitle upload failed:", err);
-        showToast("Subtitle upload failed: " + err.message, "error", 5000);
+        showToast(t("toastSubtitleUploadFailed", { message: err.message }), "error", 5000);
     }
 }
 
@@ -441,10 +454,10 @@ async function restoreSubtitleFromServer(subtitleFilename) {
             prefetchRuntimeStatusesForAllSubtitles({ silent: true });
         });
 
-        showToast("Video and subtitles restored", "info", 2500);
+        showToast(t("toastVideoAndSubtitlesRestored"), "info", 2500);
     } catch (err) {
         console.error("Could not restore subtitles:", err);
-        showToast("Video restored, but subtitles failed", "error", 5000);
+        showToast(t("toastVideoRestoredSubtitlesFailed"), "error", 5000);
     }
 }
 
@@ -935,7 +948,7 @@ document.addEventListener("keydown", (e) => {
 ankiAllBtn.onclick = async () => {
 	
 	if (!currentVideoFile) {
-	  showToast("Video is not uploaded", "error", 4000);
+	  showToast(t("toastVideoNotUploaded"), "error", 4000);
 	  return;
 	}
 
@@ -952,7 +965,7 @@ ankiAllBtn.onclick = async () => {
     const audioField = document.getElementById("audioField").value.trim();
 
 	if (!pictureField || !audioField) {
-	  showToast("Picture Field and Audio Field are required", "error", 4000);
+	  showToast(t("toastRequiredFields"), "error", 4000);
 	  return;
 	}
 
@@ -962,7 +975,7 @@ ankiAllBtn.onclick = async () => {
     });
 
 	if (currentIdx === -1) {
-	  showToast("There is no active subtitle", "error", 4000);
+	  showToast(t("toastNoActiveSubtitle"), "error", 4000);
 	  return;
 	}
 
@@ -1088,7 +1101,7 @@ ankiAllBtn.onclick = async () => {
         refreshTargetNoteList({ preserveSelection: false });
 	} catch (err) {
 	  console.error("Update error:", err);
-	  showToast("Error: " + err.message, "error", 6000);
+	  showToast(t("toastError", { message: err.message }), "error", 6000);
 	}
 };
 
@@ -1247,7 +1260,7 @@ document.getElementById("refreshAnkiHighlighterBtn")?.addEventListener("click", 
     if (sub?.text) {
 		ensureStatusesForSubtitleText(sub.text).catch((err) => {
 		  console.error("Runtime Anki highlighter failed:", err);
-		  showToast("Runtime Anki highlighter failed: " + err.message, "error", 6000);
+		  showToast(t("toastRuntimeHighlighterFailed", { message: err.message }), "error", 6000);
 		});
     }
 
@@ -1421,7 +1434,7 @@ async function restoreSelectedVideoFromServer(videoInfo) {
             text: ""
         });
 
-        showToast("Video restored without subtitles", "info", 3000);
+        showToast(t("toastSelectedVideoLoadFailed"), "error", 5000);
     }
 
     video.addEventListener("loadedmetadata", () => {
@@ -1453,9 +1466,9 @@ function showVideoPickerModal(videos) {
 
         const subtitle = document.createElement("div");
         subtitle.className = "video-picker-subtitle";
-        subtitle.textContent = videoInfo.subtitleFilename
-            ? `Subtitle: ${videoInfo.subtitleFilename}`
-            : "No subtitle found";
+		subtitle.textContent = videoInfo.subtitleFilename
+			? t("subtitleFound", { name: videoInfo.subtitleFilename })
+			: t("subtitleNotFound");
 
         item.appendChild(title);
         item.appendChild(subtitle);
