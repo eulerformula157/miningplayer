@@ -8,6 +8,8 @@
 <body>
 <div id="main">
 
+<div id="mpToastContainer" class="mp-toast-container"></div>
+
 <div id="settingsModal" class="hidden">
   <div class="settings-window">
     
@@ -179,7 +181,7 @@
   <h2 data-i18n="dropText">Drop video and subtitles (.srt .ass) here</h2>
   <p><span data-i18n="orText">or</span><span id="clickToUpload" data-i18n="chooseFiles" style="color: #8800ff; cursor: pointer; text-decoration: underline;">choose files</span></p>
   
-  <input type="file" id="multiInput" class="hidden-input" multiple accept="video/*,.srt">
+  <input type="file" id="multiInput" class="hidden-input" multiple accept="video/*,.srt,.ass">
 </div>
 
   <div id="videoContainer">
@@ -256,5 +258,8 @@
 <script src="player.js" defer></script>
 <script src="player.audio.js" defer></script>
 <script src="player.settings.js" defer></script>
+
+
+
 </body>
 </html>

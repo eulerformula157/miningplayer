@@ -68,6 +68,31 @@ video.addEventListener("timeupdate", () => {
     }
 });
 
+function showToast(message, type = "info", timeout = 3000) {
+  let container = document.getElementById("mpToastContainer");
+
+  if (!container) {
+    container = document.createElement("div");
+    container.id = "mpToastContainer";
+    container.className = "mp-toast-container";
+    document.body.appendChild(container);
+  }
+
+  const toast = document.createElement("div");
+  toast.className = `mp-toast mp-toast-${type}`;
+  toast.textContent = message;
+
+  container.appendChild(toast);
+
+  setTimeout(() => {
+    toast.classList.add("mp-toast-removing");
+
+    setTimeout(() => {
+      toast.remove();
+    }, 180);
+  }, timeout);
+}
+
 async function handleFiles(files) {
     let videoFile = null;
     let hasSubtitles = false;
@@ -683,7 +708,11 @@ document.addEventListener("keydown", (e) => {
 });
 
 ankiAllBtn.onclick = async () => {
-    if (!currentVideoFile) return alert("Video is not uploaded!");
+	
+	if (!currentVideoFile) {
+	  showToast("Video is not uploaded", "error", 4000);
+	  return;
+	}
 
     const offsetStart = parseFloat(document.getElementById("subOffsetStart").value) || 0;
     const offsetEnd = parseFloat(document.getElementById("subOffsetEnd").value) || 0;
@@ -697,16 +726,20 @@ ankiAllBtn.onclick = async () => {
     const pictureField = document.getElementById("pictureField").value.trim();
     const audioField = document.getElementById("audioField").value.trim();
 
-    if (!pictureField || !audioField) {
-        return alert("Picture Field and Audio Field are required!");
-    }
+	if (!pictureField || !audioField) {
+	  showToast("Picture Field and Audio Field are required", "error", 4000);
+	  return;
+	}
 
     const currentIdx = subtitles.findIndex((s) => {
         return (video.currentTime - globalSubDelay) >= s.start &&
             (video.currentTime - globalSubDelay) <= s.end;
     });
 
-    if (currentIdx === -1) return alert("There is no active subtitle!");
+	if (currentIdx === -1) {
+	  showToast("There is no active subtitle", "error", 4000);
+	  return;
+	}
 
     let targetTime;
 
@@ -823,15 +856,15 @@ ankiAllBtn.onclick = async () => {
 
         prefetchRuntimeStatusesForAllSubtitles({ silent: true });
 
-        alert("Successfully updated card!");
+        showToast("Card updated successfully", "success");
 
         if (targetNoteSelect) targetNoteSelect.value = "";
 
         refreshTargetNoteList({ preserveSelection: false });
-    } catch (err) {
-        console.error("Update error:", err);
-        alert("Error: " + err.message);
-    }
+	} catch (err) {
+	  console.error("Update error:", err);
+	  showToast("Error: " + err.message, "error", 6000);
+	}
 };
 
 deleteVideoBtn.onclick = async () => {
@@ -985,10 +1018,10 @@ document.getElementById("refreshAnkiHighlighterBtn")?.addEventListener("click", 
     const sub = getCurrentSubtitle?.();
 
     if (sub?.text) {
-        ensureStatusesForSubtitleText(sub.text).catch((err) => {
-            console.error("Runtime Anki highlighter failed:", err);
-            alert("Runtime Anki highlighter failed: " + err.message);
-        });
+		ensureStatusesForSubtitleText(sub.text).catch((err) => {
+		  console.error("Runtime Anki highlighter failed:", err);
+		  showToast("Runtime Anki highlighter failed: " + err.message, "error", 6000);
+		});
     }
 
     prefetchRuntimeStatusesForAllSubtitles({ silent: true });
