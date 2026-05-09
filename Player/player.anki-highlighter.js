@@ -125,18 +125,111 @@ async function loadKnownBasicWords({ force = false } = {}) {
     }
 }
 
+function normalizeJapaneseNumberText(value) {
+    return String(value || "")
+        .replace(/[０-９]/g, (ch) =>
+            String.fromCharCode(ch.charCodeAt(0) - 0xFEE0)
+        );
+}
+
+function addCandidate(candidates, value) {
+    const normalized = normalizeHighlightWord(normalizeJapaneseNumberText(value));
+
+    if (normalized && normalized !== "*") {
+        candidates.push(normalized);
+    }
+}
+
+
+
 function getJapaneseTokenCandidates(token) {
     const surface = String(token.surface_form || "");
     const basic = String(token.basic_form || "");
+    const candidates = [];
 
-    const candidates = [surface, basic].filter((v) => v && v !== "*");
+    function add(value) {
+        const normalized = normalizeHighlightWord(normalizeJapaneseNumberText(value));
+
+        if (normalized && normalized !== "*") {
+            candidates.push(normalized);
+        }
+    }
+
+	function addGodanPotentialCandidates(value) {
+		const eToDictionary = {
+			え: "う",
+			け: "く",
+			げ: "ぐ",
+			せ: "す",
+			て: "つ",
+			ね: "ぬ",
+			べ: "ぶ",
+			め: "む",
+			れ: "る"
+		};
+
+		let stem = "";
+
+		if (value.endsWith("る")) {
+			stem = value.slice(0, -1); // 支払える -> 支払え
+		} else {
+			stem = value;
+		}
+
+		const last = stem.slice(-1);
+		const base = stem.slice(0, -1);
+		const ending = eToDictionary[last];
+
+		if (ending) {
+			add(base + ending);
+		}
+	}
+
+    function addGodanConditionalCandidates(value) {
+        // 言えば -> 言う
+        // 書けば -> 書く
+        // 読めば -> 読む
+        // 話せば -> 話す
+        if (!value.endsWith("えば")) return;
+
+        const stem = value.slice(0, -2);
+
+        const eToDictionary = {
+            え: "う",
+            け: "く",
+            げ: "ぐ",
+            せ: "す",
+            て: "つ",
+            ね: "ぬ",
+            べ: "ぶ",
+            め: "む",
+            れ: "る"
+        };
+
+        const last = stem.slice(-1);
+        const base = stem.slice(0, -1);
+        const ending = eToDictionary[last];
+
+        if (ending) {
+            add(base + ending);
+        }
+    }
+
+    add(surface);
+    add(basic);
+
+    addGodanPotentialCandidates(surface);
+    addGodanPotentialCandidates(basic);
+
+    addGodanConditionalCandidates(surface);
+    addGodanConditionalCandidates(basic);
 
     if (surface.endsWith("まない")) {
-        candidates.push(surface.slice(0, -3) + "む");
+        add(surface.slice(0, -3) + "む");
     }
 
     if (surface.endsWith("まなかった")) {
-        candidates.push(surface.slice(0, -5) + "む");
+        add(surface.slice(0, -5) + "む");
     }
 
     return [...new Set(candidates)];
@@ -151,7 +244,7 @@ function isVerbChainTailToken(token) {
     const posDetail1 = token.pos_detail_1 || "";
 
     if (pos === "助動詞") return true;
-    if (pos === "助詞" && ["て", "で", "たら", "ても", "でも"].includes(surface)) return true;
+    if (pos === "助詞" && ["て", "で", "たら", "ても", "でも", "ば", "える"].includes(surface)) return true;
 
     if (pos === "動詞" && ["しまう", "いる", "ある", "くれる", "もらう", "くださる"].includes(basic)) {
         return true;
@@ -171,14 +264,14 @@ function buildJapaneseHighlightSpans(tokens) {
         const surface = String(token.surface_form || "");
         const end = start + surface.length;
 
-        if (token.pos !== "助詞") {
-            spans.push({
-                start,
-                end,
-                surface,
-                candidates: getJapaneseTokenCandidates(token)
-            });
-        }
+		if (token.pos !== "助詞" || surface.length > 1) {
+			spans.push({
+				start,
+				end,
+				surface,
+				candidates: getJapaneseTokenCandidates(token)
+			});
+		}
 
         if (token.pos !== "動詞") continue;
 
@@ -194,17 +287,59 @@ function buildJapaneseHighlightSpans(tokens) {
 
             chainSurface += nextSurface;
             chainEnd += nextSurface.length;
-            candidates.push(...getJapaneseTokenCandidates(next));
+			candidates.push(...getJapaneseTokenCandidates(next));
 
             j += 1;
         }
 
         if (j > i + 1) {
+			candidates.push(...getJapaneseTokenCandidates({
+				surface_form: chainSurface,
+				basic_form: chainSurface
+			}));			
+			
             spans.push({
                 start,
                 end: chainEnd,
                 surface: chainSurface,
                 candidates: [...new Set(candidates)]
+            });
+        }
+    }
+	
+	spans.push(...buildJapaneseCompoundSpans(tokens));
+	
+    return spans;
+}
+
+function buildJapaneseCompoundSpans(tokens) {
+    const spans = [];
+    const maxWindowSize = 2;
+
+    for (let i = 0; i < tokens.length; i += 1) {
+        let surface = "";
+        const firstToken = tokens[i];
+        const start = Math.max(0, Number(firstToken.word_position || 1) - 1);
+
+        for (let j = i; j < Math.min(tokens.length, i + maxWindowSize); j += 1) {
+            const token = tokens[j];
+            const tokenSurface = String(token.surface_form || "");
+
+            if (!tokenSurface.trim()) break;
+
+            surface += tokenSurface;
+
+            if (j === i) continue;
+
+            const candidate = normalizeHighlightWord(surface);
+
+            if (!candidate || candidate === "*") continue;
+
+            spans.push({
+                start,
+                end: start + surface.length,
+                surface,
+                candidates: [candidate]
             });
         }
     }
@@ -222,7 +357,9 @@ function collectSubtitleCandidates(text) {
     const candidates = new Set();
 
     for (const span of spans) {
-        for (const candidate of span.candidates || []) {
+        for (const rawCandidate of span.candidates || []) {
+            const candidate = normalizeHighlightWord(rawCandidate);
+
             if (candidate && candidate !== "*") {
                 candidates.add(candidate);
             }
@@ -402,10 +539,22 @@ function findAnkiMatchesInText(text) {
     }
 
     return matches
-        .sort((a, b) => a.start - b.start || b.end - a.end)
+        .sort((a, b) => {
+            if (a.start !== b.start) return a.start - b.start;
+            return (b.end - b.start) - (a.end - a.start);
+        })
         .filter((match, index, arr) => {
-            if (index === 0) return true;
-            return match.start >= arr[index - 1].end;
+            for (let i = 0; i < index; i += 1) {
+                const prev = arr[i];
+
+                const overlaps =
+                    match.start < prev.end &&
+                    match.end > prev.start;
+
+                if (overlaps) return false;
+            }
+
+            return true;
         });
 }
 
