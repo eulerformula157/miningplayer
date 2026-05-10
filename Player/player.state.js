@@ -21,3 +21,7 @@ let subtitleSearchTimeSeconds = null;
 let deckNoteRefreshTimer = null;
 
 let runtimeHighlightPrefetchReady = false;
+let runtimePrefetchWindowStart = -1;
+let runtimePrefetchWindowEnd = -1;
+let runtimeNextPrefetchStart = 0;
+let lastPrefetchSubtitleIndex = -1;	

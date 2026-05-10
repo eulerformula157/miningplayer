@@ -45,6 +45,36 @@ video.addEventListener("timeupdate", () => {
         });
     }
 
+	if (sub) {
+		const currentSubtitleIndex = subtitles.indexOf(sub);
+
+		if (currentSubtitleIndex !== -1) {
+			const windowSize =
+				runtimePrefetchWindowEnd - runtimePrefetchWindowStart + 1;
+
+			const halfPoint =
+				runtimePrefetchWindowStart + Math.floor(windowSize / 2);
+
+			const shouldPrefetchNextWindow =
+				runtimePrefetchWindowStart !== -1 &&
+				runtimePrefetchWindowEnd !== -1 &&
+				currentSubtitleIndex >= halfPoint &&
+				runtimeNextPrefetchStart < subtitles.length &&
+				!runtimePrefetchAllInProgress;
+
+			if (shouldPrefetchNextWindow) {
+				console.log(
+					`Runtime next window trigger: current=${currentSubtitleIndex}, next=${runtimeNextPrefetchStart}`
+				);
+
+				prefetchRuntimeStatusesForAllSubtitles({
+					silent: true,
+					startIndex: runtimeNextPrefetchStart
+				});
+			}
+		}
+	}
+
     renderSubtitleOverlay({
         overlay,
         text: sub ? sub.text : "",
@@ -148,14 +178,20 @@ function markKnownBasicWordAsMature(word) {
     });
 }
 
-async function prefetchRuntimeStatusesForAllSubtitles({ silent = true } = {}) {
+async function prefetchRuntimeStatusesForAllSubtitles({
+    silent = true,
+    startIndex = null
+} = {}) {
     if (!Array.isArray(subtitles) || !subtitles.length) return;
+    if (runtimePrefetchAllInProgress) return;
 
     const runId = ++runtimePrefetchAllRunId;
     runtimePrefetchAllInProgress = true;
     runtimeHighlightPrefetchReady = false;
-	const chunkSize = 20;
-	const chunkDelayMs = 1500;
+
+    const chunkSize = 100;
+    const chunkDelayMs = 50;
+    const subtitleWindowSize = 5;
 
     try {
         await loadKnownBasicWords?.();
@@ -164,12 +200,34 @@ async function prefetchRuntimeStatusesForAllSubtitles({ silent = true } = {}) {
             await getJapaneseTokenizer();
         }
 
+        let currentIdx = Number.isInteger(startIndex)
+            ? startIndex
+            : subtitles.indexOf(getCurrentSubtitle?.());
+
+        if (currentIdx < 0) currentIdx = 0;
+
+        const startIdx = Math.max(0, currentIdx);
+        const endIdx = Math.min(
+            subtitles.length - 1,
+            startIdx + subtitleWindowSize - 1
+        );
+
+        runtimePrefetchWindowStart = startIdx;
+        runtimePrefetchWindowEnd = endIdx;
+        runtimeNextPrefetchStart = endIdx + 1;
+
+        const subtitlesToPrefetch = subtitles.slice(startIdx, endIdx + 1);
+
+        console.log(
+            `Runtime window prefetch: subtitles ${startIdx}-${endIdx} / ${subtitles.length}`
+        );
+
         const allCandidates = new Set();
 
-        for (let i = 0; i < subtitles.length; i += 1) {
+        for (let i = 0; i < subtitlesToPrefetch.length; i += 1) {
             if (runId !== runtimePrefetchAllRunId) return;
 
-            const text = subtitles[i]?.text;
+            const text = subtitlesToPrefetch[i]?.text;
             if (!text) continue;
 
             const candidates = collectSubtitleCandidates(text);
@@ -179,23 +237,14 @@ async function prefetchRuntimeStatusesForAllSubtitles({ silent = true } = {}) {
                     allCandidates.add(candidate);
                 }
             }
-
-            if (i % 50 === 0) {
-                console.log(`Runtime collect candidates ${i}/${subtitles.length}`);
-                await new Promise((resolve) => setTimeout(resolve, chunkDelayMs));
-            }
         }
 
         const candidates = [...allCandidates];
 
-
         console.log(`Runtime batch prefetch started: ${candidates.length} candidates`);
 
         for (let i = 0; i < candidates.length; i += chunkSize) {
-            if (runId !== runtimePrefetchAllRunId) {
-                console.log("Runtime batch prefetch cancelled");
-                return;
-            }
+            if (runId !== runtimePrefetchAllRunId) return;
 
             const chunk = candidates.slice(i, i + chunkSize);
 
@@ -210,7 +259,7 @@ async function prefetchRuntimeStatusesForAllSubtitles({ silent = true } = {}) {
 
         if (runId === runtimePrefetchAllRunId) {
             runtimeHighlightPrefetchReady = true;
-            console.log("Runtime batch prefetch finished");
+            console.log("Runtime window prefetch finished");
             rerenderCurrentSubtitleWithAnkiHighlighter?.();
         }
     } catch (err) {
@@ -976,8 +1025,13 @@ ankiAllBtn.onclick = async () => {
                 }
             })
         });
+		
+		runtimePrefetchWindowStart = -1;
+		runtimePrefetchWindowEnd = -1;
+		runtimeNextPrefetchStart = 0;
+		runtimeHighlightPrefetchReady = false;
 
-        clearRuntimeWordStatuses?.();
+		clearRuntimeWordStatuses?.();
 
         await ensureStatusesForSubtitleText(combinedText).catch((err) => {
             console.warn("Could not update runtime highlight status:", err);
@@ -1086,8 +1140,13 @@ const highlightDeckNamesInput = document.getElementById("highlightDeckNames");
 		runtimeHighlightPrefetchReady = false;
 		prefetchRuntimeStatusesForAllSubtitles({ silent: true });
 
-        clearRuntimeWordStatuses?.();
+		runtimePrefetchWindowStart = -1;
+		runtimePrefetchWindowEnd = -1;
+		runtimeNextPrefetchStart = 0;
+		runtimeHighlightPrefetchReady = false;
 
+		clearRuntimeWordStatuses?.();
+		
         const sub = getCurrentSubtitle();
 
         if (sub?.text) {
@@ -1144,8 +1203,14 @@ window.addEventListener("load", () => {
 
 document.getElementById("refreshAnkiHighlighterBtn")?.addEventListener("click", () => {
     runtimePrefetchAllRunId += 1;
-    clearRuntimeWordStatuses?.();
+	
+		runtimePrefetchWindowStart = -1;
+		runtimePrefetchWindowEnd = -1;
+		runtimeNextPrefetchStart = 0;
+		runtimeHighlightPrefetchReady = false;
 
+		clearRuntimeWordStatuses?.();
+		
     const sub = getCurrentSubtitle?.();
 
     if (sub?.text) {
