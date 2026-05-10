@@ -38,6 +38,7 @@ async function handleFiles(files) {
 
     lastRuntimeSubtitleText = "";
     runtimePrefetchAllRunId += 1;
+	runtimeHighlightPrefetchReady = false;
 
     clearRuntimeWordStatuses?.();
 
@@ -124,6 +125,7 @@ async function restoreSubtitleFromServer(subtitleFilename) {
 
         lastRuntimeSubtitleText = "";
         runtimePrefetchAllRunId += 1;
+		runtimeHighlightPrefetchReady = false;
 
         clearRuntimeWordStatuses?.();
 

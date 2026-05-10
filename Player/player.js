@@ -148,13 +148,12 @@ function markKnownBasicWordAsMature(word) {
     });
 }
 
-
-
 async function prefetchRuntimeStatusesForAllSubtitles({ silent = true } = {}) {
     if (!Array.isArray(subtitles) || !subtitles.length) return;
 
     const runId = ++runtimePrefetchAllRunId;
     runtimePrefetchAllInProgress = true;
+    runtimeHighlightPrefetchReady = false;
 
     try {
         await loadKnownBasicWords?.();
@@ -169,29 +168,30 @@ async function prefetchRuntimeStatusesForAllSubtitles({ silent = true } = {}) {
                 .filter(Boolean)
         )];
 
-        const currentSub = getCurrentSubtitle?.();
-        const currentText = currentSub?.text || "";
+        console.log(`Runtime prefetch started: ${uniqueTexts.length} subtitle lines`);
 
-        if (currentText) {
-            await ensureStatusesForSubtitleText(currentText, {
-                rerender: true,
-                silent
-            });
-        }
+        for (let i = 0; i < uniqueTexts.length; i += 1) {
+            if (runId !== runtimePrefetchAllRunId) {
+                console.log("Runtime prefetch cancelled");
+                return;
+            }
 
-        for (const text of uniqueTexts) {
-            if (runId !== runtimePrefetchAllRunId) return;
-            if (text === currentText) continue;
+            const text = uniqueTexts[i];
+
+            console.log(`Runtime prefetch ${i + 1}/${uniqueTexts.length}:`, text);
 
             await ensureStatusesForSubtitleText(text, {
                 rerender: false,
-                silent: true
+                silent
             });
 
-            await new Promise((resolve) => setTimeout(resolve, 10));
+            await new Promise((resolve) => setTimeout(resolve, 5));
         }
 
         if (runId === runtimePrefetchAllRunId) {
+            runtimeHighlightPrefetchReady = true;
+            console.log("Runtime prefetch finished");
+
             rerenderCurrentSubtitleWithAnkiHighlighter?.();
         }
     } catch (err) {
@@ -1059,6 +1059,7 @@ const highlightDeckNamesInput = document.getElementById("highlightDeckNames");
     input?.addEventListener("change", () => {
         lastRuntimeSubtitleText = "";
         runtimePrefetchAllRunId += 1;
+		runtimeHighlightPrefetchReady = false;
 
         clearRuntimeWordStatuses?.();
 

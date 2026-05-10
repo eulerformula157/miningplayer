@@ -19,3 +19,5 @@ let subtitleSearchMode = "word";
 let subtitleSearchTimeSeconds = null;
 
 let deckNoteRefreshTimer = null;
+
+let runtimeHighlightPrefetchReady = false;
