@@ -154,6 +154,8 @@ async function prefetchRuntimeStatusesForAllSubtitles({ silent = true } = {}) {
     const runId = ++runtimePrefetchAllRunId;
     runtimePrefetchAllInProgress = true;
     runtimeHighlightPrefetchReady = false;
+	const chunkSize = 20;
+	const chunkDelayMs = 1500;
 
     try {
         await loadKnownBasicWords?.();
@@ -180,12 +182,12 @@ async function prefetchRuntimeStatusesForAllSubtitles({ silent = true } = {}) {
 
             if (i % 50 === 0) {
                 console.log(`Runtime collect candidates ${i}/${subtitles.length}`);
-                await new Promise((resolve) => setTimeout(resolve, 0));
+                await new Promise((resolve) => setTimeout(resolve, chunkDelayMs));
             }
         }
 
         const candidates = [...allCandidates];
-        const chunkSize = 150;
+
 
         console.log(`Runtime batch prefetch started: ${candidates.length} candidates`);
 
@@ -203,7 +205,7 @@ async function prefetchRuntimeStatusesForAllSubtitles({ silent = true } = {}) {
 
             await ensureStatusesForCandidates(chunk, { silent: true });
 
-            await new Promise((resolve) => setTimeout(resolve, 0));
+            await new Promise((resolve) => setTimeout(resolve, chunkDelayMs));
         }
 
         if (runId === runtimePrefetchAllRunId) {
@@ -327,17 +329,21 @@ videoContainer.addEventListener("mousemove", (e) => {
 });
 
 async function fetchDeckNoteIds(ankiUrl, deckName) {
-    const findRes = await fetch(ankiUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-            action: "findNotes",
-            version: 6,
-            params: {
-                query: `deck:"${deckName}"`
-            }
-        })
-    });
+	const findRes = await fetchWithRetry(ankiUrl, {
+		method: "POST",
+		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify({
+			action: "findNotes",
+			version: 6,
+			params: {
+				query: `deck:"${deckName}"`
+			}
+		})
+	}, {
+		retries: 500,
+		delayMs: 1000,
+		label: "AnkiConnect findNotes"
+	});
 
     const findData = await findRes.json();
 
@@ -530,17 +536,21 @@ function pickNotePreviewText(noteInfo) {
 }
 
 async function fetchNotesInfo(ankiUrl, noteIds) {
-    const res = await fetch(ankiUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-            action: "notesInfo",
-            version: 6,
-            params: {
-                notes: noteIds
-            }
-        })
-    });
+	const res = await fetchWithRetry(ankiUrl, {
+		method: "POST",
+		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify({
+			action: "notesInfo",
+			version: 6,
+			params: {
+				notes: noteIds
+			}
+		})
+	}, {
+		retries: 500,
+		delayMs: 1000,
+		label: "AnkiConnect notesInfo"
+	});
 
     const data = await res.json();
 

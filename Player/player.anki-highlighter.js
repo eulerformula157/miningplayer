@@ -33,7 +33,7 @@ function pickBetterStatus(oldStatus, newStatus) {
 }
 
 async function ankiRequest(ankiUrl, action, params = {}) {
-    const res = await fetch(ankiUrl, {
+    const res = await fetchWithRetry(ankiUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -41,6 +41,10 @@ async function ankiRequest(ankiUrl, action, params = {}) {
             version: 6,
             params
         })
+    }, {
+        retries: 500,
+        delayMs: 1000,
+        label: `AnkiConnect ${action}`
     });
 
     const data = await res.json();
