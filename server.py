@@ -271,19 +271,52 @@ def upload_subtitle():
         return jsonify({"error": "Only .srt and .ass subtitles are supported"}), 400
 
     video_base_name = os.path.splitext(safe_video_filename)[0]
-    subtitle_filename = f"{video_base_name}{subtitle_ext}"
 
-    save_path = os.path.join(VIDEO_DIR, subtitle_filename)
-    subtitle_file.save(save_path)
+    # На выходе всегда храним .srt
+    srt_filename = f"{video_base_name}.srt"
+    srt_path = VIDEO_DIR / srt_filename
+
+    # Если уже SRT — просто сохраняем как .srt
+    if subtitle_ext == ".srt":
+        subtitle_file.save(srt_path)
+        return jsonify({
+            "filename": srt_filename
+        })
+
+    # Если ASS — сохраняем временно и конвертируем через ffmpeg
+    temp_ass_filename = f"temp_{video_base_name}.ass"
+    temp_ass_path = VIDEO_DIR / temp_ass_filename
+
+    subtitle_file.save(temp_ass_path)
+
+    cmd = [
+        "ffmpeg",
+        "-y",
+        "-i", str(temp_ass_path),
+        "-c:s", "srt",
+        str(srt_path)
+    ]
+
+    try:
+        _run_subprocess(cmd)
+    except RuntimeError as err:
+        if srt_path.exists():
+            srt_path.unlink()
+        return jsonify({
+            "error": f"FFmpeg subtitle conversion error: {str(err)}"
+        }), 500
+    finally:
+        if temp_ass_path.exists():
+            temp_ass_path.unlink()
 
     return jsonify({
-        "filename": subtitle_filename
-    })    
-
+        "filename": srt_filename
+    })
+    
 @app.route("/current-video", methods=["GET"])
 def current_video():
     video_extensions = {".mp4", ".mkv", ".webm", ".avi", ".mov"}
-    subtitle_extensions = [".srt", ".ass"]
+    subtitle_extensions = [".srt"]
 
     videos = [
         path for path in VIDEO_DIR.iterdir()
@@ -315,7 +348,7 @@ def current_video():
 @app.route("/videos", methods=["GET"])
 def list_videos():
     video_extensions = {".mp4", ".mkv", ".webm", ".avi", ".mov"}
-    subtitle_extensions = [".srt", ".ass"]
+    subtitle_extensions = [".srt"]
 
     videos = []
 
@@ -360,7 +393,7 @@ def serve_subtitle(filename):
 
     ext = os.path.splitext(safe_name)[1].lower()
 
-    if ext not in {".srt", ".ass"}:
+    if ext != ".srt":
         return jsonify({"error": "Invalid subtitle extension"}), 400
 
     return send_from_directory(str(VIDEO_DIR), safe_name)
@@ -717,7 +750,6 @@ def delete_video():
     if not filename:
         return jsonify({"error":"filename не указан"}), 400
     
-    # 1. Удаляем видео
     try:
         safe_filename = _safe_media_name(filename)
     except ValueError as err:
@@ -726,8 +758,14 @@ def delete_video():
     video_path = os.path.join(VIDEO_DIR, safe_filename)
     if os.path.exists(video_path):
         os.remove(video_path)
+
+    # Удаляем связанный .srt
+    video_base_name = os.path.splitext(safe_filename)[0]
+    subtitle_path = os.path.join(VIDEO_DIR, f"{video_base_name}.srt")
+    if os.path.exists(subtitle_path):
+        os.remove(subtitle_path)
     
-    # 2. Удаляем все связанные временные аудиофайлы (начинающиеся на temp_ и содержащие имя файла)
+    # Удаляем временные аудиофайлы
     for f in os.listdir(VIDEO_DIR):
         if f.startswith("temp_") and safe_filename in f:
             try:

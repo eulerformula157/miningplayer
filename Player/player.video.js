@@ -10,10 +10,6 @@ async function handleFiles(files) {
             subtitleFile = file;
             subtitles = parseSRT(await file.text());
             hasSubtitles = true;
-        } else if (lowerName.endsWith(".ass")) {
-            subtitleFile = file;
-            subtitles = parseASS(await file.text());
-            hasSubtitles = true;
         } else if (file.type.startsWith("video")) {
             videoFile = file;
         }
@@ -117,9 +113,7 @@ async function restoreSubtitleFromServer(subtitleFilename) {
 
         if (lowerName.endsWith(".srt")) {
             subtitles = parseSRT(text);
-        } else if (lowerName.endsWith(".ass")) {
-            subtitles = parseASS(text);
-        } else {
+        }  else {
             throw new Error("Unsupported subtitle format");
         }
 

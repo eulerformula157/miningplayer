@@ -187,7 +187,7 @@ async function prefetchRuntimeStatusesForAllSubtitles({
 
     const chunkSize = 100;
     const chunkDelayMs = 50;
-    const subtitleWindowSize = 5;
+    const subtitleWindowSize = 20;
 
     try {
         await loadKnownBasicWords?.();
