@@ -38,3 +38,4 @@ function tokenizeJapaneseTextSync(text) {
     if (!japaneseTokenizerInstance) return null;
     return japaneseTokenizerInstance.tokenize(String(text || ""));
 }
+

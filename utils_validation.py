@@ -56,3 +56,4 @@ def to_float(value, fallback=0.0) -> float:
         return float(value)
     except (TypeError, ValueError):
         return fallback
+

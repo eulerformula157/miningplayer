@@ -218,3 +218,5 @@ const langSelect = document.getElementById("interfaceLangSelect");
 if (langSelect) {
     langSelect.onchange = (e) => applyLanguage(e.target.value);
 }
+
+

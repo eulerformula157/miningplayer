@@ -16,3 +16,4 @@ def run_subprocess(cmd: list[str]) -> subprocess.CompletedProcess:
     except subprocess.CalledProcessError as err:
         details = err.stderr.strip() if err.stderr else str(err)
         raise RuntimeError(details)
+

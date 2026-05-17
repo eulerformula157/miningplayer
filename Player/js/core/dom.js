@@ -28,3 +28,4 @@ const dom = {
     addCardToDeck: document.getElementById("addCardToDeck"),
     volume: document.getElementById("volume")
 };
+

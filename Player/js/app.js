@@ -291,31 +291,6 @@ dropzone.addEventListener("drop", (e) => {
 });
 dropzone.addEventListener("dragover", (e) => e.preventDefault());
 
-toggleBtn.onclick = (e) => {
-    e.stopPropagation();
-
-    const isHidden = sidebar.classList.contains("hidden");
-
-    if (!isHidden) {
-        const currentWidth = sidebar.style.width || `${Math.round(sidebar.getBoundingClientRect().width)}px`;
-        if (currentWidth && currentWidth !== "0px") lastSidebarWidth = currentWidth;
-
-        sidebar.classList.add("hidden");
-        resizer.classList.add("hidden");
-        sidebar.style.width = "0px";
-    } else {
-        sidebar.classList.remove("hidden");
-        resizer.classList.remove("hidden");
-
-        const saved = JSON.parse(localStorage.getItem("subtitlePlayerSettings") || "{}").sidebarWidth;
-        sidebar.style.width = lastSidebarWidth || saved || "260px";
-    }
-
-    const langKey = sidebar.classList.contains("hidden") ? "showSubs" : "hideSubs";
-    toggleBtn.textContent = i18n[currentLang].dict[langKey];
-};
-
-
 playPause.onclick = (e) => {
     e.stopPropagation();
 
@@ -1173,7 +1148,7 @@ window.addEventListener("load", () => {
     initTargetNoteDropdown();
     refreshTargetNoteList({ preserveSelection: true });
     updateIconButtons();
-	initSubtitleSearchPanel();
+	initSubtitleSidebar();
 
 	restoreCurrentVideoFromServer();
 
@@ -1229,34 +1204,6 @@ document.addEventListener("visibilitychange", () => {
             audioManager.externalAudio.play().catch(() => {});
         }
     }
-});
-
-resizer.addEventListener("mousedown", () => {
-    isResizing = true;
-    document.body.style.cursor = "col-resize";
-    document.body.style.userSelect = "none";
-});
-
-document.addEventListener("mousemove", (e) => {
-    if (!isResizing) return;
-
-    const newWidth = window.innerWidth - e.clientX;
-
-    if (newWidth > 150 && newWidth < window.innerWidth * 0.5) {
-        sidebar.style.width = `${newWidth}px`;
-    }
-});
-
-document.addEventListener("mouseup", () => {
-    if (!isResizing) return;
-
-    isResizing = false;
-    document.body.style.cursor = "default";
-    document.body.style.userSelect = "auto";
-
-    const settings = JSON.parse(localStorage.getItem("subtitlePlayerSettings") || "{}");
-    settings.sidebarWidth = sidebar.style.width;
-    localStorage.setItem("subtitlePlayerSettings", JSON.stringify(settings));
 });
 
 addKnownBasicBtn?.addEventListener("mousedown", (e) => {
@@ -1333,4 +1280,6 @@ document.addEventListener("selectionchange", () => {
         showAddKnownBasicButtonForSelection();
     });
 });
+
+
 

@@ -173,3 +173,4 @@ function hideAddKnownBasicButton() {
     addCardToDeck?.classList.add("hidden");
     selectedKnownBasicWord = "";
 }
+
