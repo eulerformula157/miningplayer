@@ -187,6 +187,10 @@ async function restoreSelectedVideoFromServer(videoInfo) {
     dropzone.classList.add("hidden");
     videoPickerModal?.classList.add("hidden");
 
+	loadAudioTrackList({
+		videoFileId: playback.videoFileId
+	});
+
     loadAudioTrackList(videoInfo.filename);
 
     if (videoInfo.subtitleFilename) {
@@ -255,3 +259,149 @@ function showVideoPickerModal(videos) {
 }
 
 
+async function loadLibraryEpisodeFromUrl() {
+    const params = new URLSearchParams(window.location.search);
+    const episodeId = params.get("episodeId");
+
+    if (!episodeId) return false;
+
+    try {
+        const { response, data } = await apiJson(`/library/episodes/${encodeURIComponent(episodeId)}/playback`);
+
+        if (!response.ok || data.error) {
+            throw new Error(data.error || "Could not load library episode");
+        }
+
+        await loadLibraryEpisodePlayback(data);
+        return true;
+    } catch (err) {
+        console.error("Library episode load failed:", err);
+        showToast(`Could not load library episode: ${err.message}`, "error", 6000);
+        dropzone.classList.remove("hidden");
+        return false;
+    }
+}
+
+
+async function loadLibraryEpisodePlayback(playback) {
+    currentLibraryEpisodeId = playback.episodeId;
+    currentLibraryVideoFileId = playback.videoFileId;
+    currentLibrarySubtitleFileId = playback.subtitleFileId || null;
+
+    // В library-режиме пока не используем старое имя файла из UploadedVideos.
+    // Следующим шагом адаптируем screenshot/audio endpoints под episodeId.
+    currentVideoFile = null;
+
+    subtitles = [];
+    lastRuntimeSubtitleText = "";
+    runtimePrefetchAllRunId += 1;
+    runtimeHighlightPrefetchReady = false;
+
+    clearRuntimeWordStatuses?.();
+
+    video.src = buildApiUrl(playback.videoUrl);
+    video.load();
+
+    dropzone.classList.add("hidden");
+    videoPickerModal?.classList.add("hidden");
+
+    if (playback.subtitleUrl) {
+        await restoreLibrarySubtitle(playback.subtitleUrl);
+    } else {
+        renderSubtitles();
+
+        renderSubtitleOverlay({
+            overlay,
+            text: ""
+        });
+
+        showToast("No subtitles found for this episode", "info", 4000);
+    }
+
+    video.addEventListener("loadedmetadata", () => {
+        const startTime = Number(playback.currentTimeSeconds || 0);
+
+        if (startTime > 0 && startTime < video.duration) {
+            video.currentTime = startTime;
+        }
+
+        console.log(
+            `Library episode loaded: ${playback.seriesTitle} / ${playback.episodeTitle}`
+        );
+    }, { once: true });
+
+    video.addEventListener("error", () => {
+        console.error("Library video load failed:", video.error);
+        showToast("Could not load library video", "error", 6000);
+        dropzone.classList.remove("hidden");
+    }, { once: true });
+
+    requestAnimationFrame(() => {
+        prefetchRuntimeStatusesForAllSubtitles({ silent: true });
+    });
+}
+
+
+async function restoreLibrarySubtitle(subtitleUrl) {
+    try {
+        const res = await fetch(buildApiUrl(subtitleUrl));
+
+        if (!res.ok) {
+            throw new Error(`Subtitle request failed: ${res.status}`);
+        }
+
+        const text = await res.text();
+
+        let parsed = parseSRT(text);
+
+        // /library/file/<id> не содержит расширения в URL,
+        // поэтому если SRT не распарсился, пробуем ASS.
+        if (!parsed.length) {
+            parsed = parseASS(text);
+        }
+
+        subtitles = parsed;
+        lastRuntimeSubtitleText = "";
+
+        clearRuntimeWordStatuses?.();
+
+        renderSubtitles();
+
+        renderSubtitleOverlay({
+            overlay,
+            text: ""
+        });
+
+        if (!subtitles.length) {
+            showToast("Subtitle file was loaded, but no subtitles were parsed", "error", 5000);
+        }
+    } catch (err) {
+        console.error("Library subtitle restore failed:", err);
+        subtitles = [];
+
+        renderSubtitles();
+
+        renderSubtitleOverlay({
+            overlay,
+            text: ""
+        });
+
+        showToast(`Could not load subtitles: ${err.message}`, "error", 6000);
+    }
+}
+
+function getCurrentVideoPayload() {
+    if (currentLibraryVideoFileId) {
+        return {
+            videoFileId: currentLibraryVideoFileId
+        };
+    }
+
+    if (currentVideoFile) {
+        return {
+            filename: currentVideoFile
+        };
+    }
+
+    return null;
+}

@@ -246,6 +246,73 @@ def serve_library_file(file_id):
         as_attachment=False,
     )
 
+def resolve_video_path_from_payload(data: dict) -> tuple[Optional[Path], Optional[dict], Optional[tuple]]:
+    """
+    Returns:
+      (video_path, video_identity, error_response)
+
+    video_identity is used for dedupe keys.
+    error_response is (jsonify_payload, status_code).
+    """
+    if not isinstance(data, dict):
+        return None, None, ({"error": "Invalid JSON payload"}, 400)
+
+    video_file_id = data.get("videoFileId")
+
+    if video_file_id is not None:
+        try:
+            file_id = int(video_file_id)
+        except (TypeError, ValueError):
+            return None, None, ({"error": "Invalid videoFileId"}, 400)
+
+        result = get_library_file_by_id(LIBRARY_DB_PATH, file_id)
+
+        if not result.get("found"):
+            return None, None, ({"error": "Library video file not found"}, 404)
+
+        file_info = result["file"]
+
+        if file_info.get("file_type") != "video":
+            return None, None, ({"error": "Library file is not a video"}, 400)
+
+        video_path = Path(file_info["path"]).resolve()
+
+        if not is_within(MEDIA_LIBRARY_DIR, video_path):
+            return None, None, ({"error": "Video file is outside MEDIA_LIBRARY_DIR"}, 403)
+
+        if not video_path.exists() or not video_path.is_file():
+            return None, None, ({"error": "Video file is missing"}, 404)
+
+        return video_path, {
+            "source": "library",
+            "videoFileId": file_id,
+            "path": str(video_path),
+        }, None
+
+    filename = data.get("filename")
+
+    if not filename:
+        return None, None, ({"error": "filename or videoFileId is required"}, 400)
+
+    try:
+        safe_filename = safe_media_name(filename)
+    except ValueError as err:
+        return None, None, ({"error": str(err)}, 400)
+
+    video_path = (VIDEO_DIR / safe_filename).resolve()
+
+    if not is_within(VIDEO_DIR, video_path):
+        return None, None, ({"error": "Video file is outside VIDEO_DIR"}, 403)
+
+    if not video_path.exists() or not video_path.is_file():
+        return None, None, ({"error": "Video file not found"}, 404)
+
+    return video_path, {
+        "source": "uploaded",
+        "filename": safe_filename,
+        "path": str(video_path),
+    }, None
+
 # --- Статические файлы ---
 @app.route('/')
 def index():
@@ -463,27 +530,25 @@ def serve_subtitle(filename):
 # --- Создание скриншота ---
 @app.route('/screenshot', methods=['POST'])
 def screenshot():
-    data = request.get_json()
-    filename = data.get('filename')
+    data = request.get_json(silent=True) or {}
     t_val = data.get('time')
     text = data.get('text', '').strip()
-    # Увеличиваем базовый размер шрифта для лучшей читаемости
     font_size = int(2.0 * int(data.get('fontSize', 40)))
 
-    if not filename or t_val is None:
-        return jsonify({"error":"Параметры не указаны"}), 400
+    if t_val is None:
+        return jsonify({"error": "time is required"}), 400
 
-    try:
-        safe_filename = safe_media_name(filename)
-    except ValueError as err:
-        return jsonify({"error": str(err)}), 400
+    video_path_obj, video_identity, error_response = resolve_video_path_from_payload(data)
+    if error_response:
+        payload, status_code = error_response
+        return jsonify(payload), status_code
 
-    video_path = os.path.join(VIDEO_DIR, safe_filename)
+    video_path = str(video_path_obj)
     raw_screenshot = os.path.join(VIDEO_DIR, "temp_raw.jpg")
     normalized_text = normalize_text(text)
 
     screenshot_payload = {
-        "filename": safe_filename,
+        "video": video_identity,
         "time": round(to_float(t_val), 3),
         "text": normalized_text,
         "fontSize": font_size,
@@ -550,22 +615,21 @@ def screenshot():
 # --- Создание WEBP анимации ---
 @app.route('/animated-webp', methods=['POST'])
 def animated_webp():
-    data = request.get_json()
-    filename = data.get('filename')
+    data = request.get_json(silent=True) or {}
     start = data.get('start')
     end = data.get('end')
     text = data.get('text', '').strip()
     font_size = int(3.0 * int(data.get('fontSize', 40)))
 
-    if not filename or start is None or end is None:
-        return jsonify({"error": "Параметры не указаны"}), 400
+    if start is None or end is None:
+        return jsonify({"error": "start and end are required"}), 400
 
-    try:
-        safe_filename = safe_media_name(filename)
-    except ValueError as err:
-        return jsonify({"error": str(err)}), 400
+    video_path_obj, video_identity, error_response = resolve_video_path_from_payload(data)
+    if error_response:
+        payload, status_code = error_response
+        return jsonify(payload), status_code
 
-    video_path = os.path.join(VIDEO_DIR, safe_filename)
+    video_path = str(video_path_obj)
 
     start_f = round(to_float(start), 3)
     end_f = round(to_float(end), 3)
@@ -579,7 +643,7 @@ def animated_webp():
     normalized_text = normalize_text(text)
 
     webp_payload = {
-        "filename": safe_filename,
+        "video": video_identity,
         "start": start_f,
         "duration": round(duration, 3),
         "text": normalized_text,
@@ -657,31 +721,28 @@ Dialogue: 0,0:00:00.00,{duration_ass},Default,,0,0,0,,{ass_text}
 # --- Создание аудио ---
 @app.route('/audio-to-anki', methods=['POST'])
 def audio():
-    data = request.get_json()
-    filename = data.get("filename")
+    data = request.get_json(silent=True) or {}
     start = data.get("start")
     end = data.get("end")
-    # Возвращаем индекс, переданный из фронтенда (например, "a:0" или "1")
-    track_index = data.get("trackIndex", "a:0") 
-    
-    volume_level = data.get("volume", "1") # Берем из запроса, по умолчанию 1
+    track_index = data.get("trackIndex", "a:0")
+    volume_level = data.get("volume", "1")
 
-    if not filename or start is None or end is None:
-        return jsonify({"error":"Неверные параметры"}), 400
+    if start is None or end is None:
+        return jsonify({"error": "start and end are required"}), 400
 
-    try:
-        safe_filename = safe_media_name(filename)
-    except ValueError as err:
-        return jsonify({"error": str(err)}), 400
+    video_path_obj, video_identity, error_response = resolve_video_path_from_payload(data)
+    if error_response:
+        payload, status_code = error_response
+        return jsonify(payload), status_code
 
-    video_path = os.path.join(VIDEO_DIR, safe_filename)
+    video_path = str(video_path_obj)
     start_f = round(to_float(start), 3)
     end_f = round(to_float(end), 3)
     volume_f = round(to_float(volume_level, 1.0), 3)
     track_str = str(track_index)
 
     audio_payload = {
-        "filename": safe_filename,
+        "video": video_identity,
         "start": start_f,
         "end": end_f,
         "trackIndex": track_str,
@@ -737,51 +798,87 @@ def get_temp_audio():
 
 @app.route('/get-audio-tracks', methods=['GET'])
 def get_audio_tracks():
+    video_file_id = request.args.get("videoFileId")
     filename = request.args.get("filename")
-    if not filename:
-        return jsonify({"error": "filename не указан"}), 400
-    
-    # ВАЖНО: используем os.path.join(VIDEO_DIR, filename)
-    try:
-        safe_filename = safe_media_name(filename)
-    except ValueError as err:
-        return jsonify({"error": str(err)}), 400
 
-    video_path = os.path.join(VIDEO_DIR, safe_filename)
-    
-    if not os.path.exists(video_path):
-        return jsonify({"error": f"Файл {filename} не найден по пути {video_path}"}), 404
+    if video_file_id:
+        try:
+            file_id = int(video_file_id)
+        except (TypeError, ValueError):
+            return jsonify({"error": "Invalid videoFileId"}), 400
+
+        result = get_library_file_by_id(LIBRARY_DB_PATH, file_id)
+
+        if not result.get("found"):
+            return jsonify({"error": "Library video file not found"}), 404
+
+        file_info = result["file"]
+
+        if file_info.get("file_type") != "video":
+            return jsonify({"error": "Library file is not a video"}), 400
+
+        video_path_obj = Path(file_info["path"]).resolve()
+
+        if not is_within(MEDIA_LIBRARY_DIR, video_path_obj):
+            return jsonify({"error": "Video file is outside MEDIA_LIBRARY_DIR"}), 403
+
+        if not video_path_obj.exists() or not video_path_obj.is_file():
+            return jsonify({"error": "Video file is missing"}), 404
+
+        video_path = str(video_path_obj)
+
+    else:
+        if not filename:
+            return jsonify({"error": "filename or videoFileId is required"}), 400
+
+        try:
+            safe_filename = safe_media_name(filename)
+        except ValueError as err:
+            return jsonify({"error": str(err)}), 400
+
+        video_path_obj = (VIDEO_DIR / safe_filename).resolve()
+
+        if not video_path_obj.exists() or not is_within(VIDEO_DIR, video_path_obj):
+            return jsonify({"error": f"Файл {filename} не найден по пути {video_path_obj}"}), 404
+
+        video_path = str(video_path_obj)
 
     cmd = [
         "ffprobe", "-v", "error", "-select_streams", "a",
         "-show_entries", "stream=index:stream_tags=language,title",
         "-of", "json", video_path
     ]
-    
+
     try:
         result = run_subprocess(cmd)
-        # Если ffprobe ничего не нашел, result.stdout может быть пустым
         data = json.loads(result.stdout)
         tracks = data.get("streams", [])
         return jsonify({"tracks": tracks})
     except Exception as e:
-        print(f"Ошибка FFprobe: {e}") # Это появится в консоли Python
+        print(f"Ошибка FFprobe: {e}")
         return jsonify({"error": str(e)}), 500
 
 @app.route('/get-track-url', methods=['POST'])
 def get_track_url():
-    data = request.get_json()
-    filename = data.get("filename")
-    track_index = data.get("trackIndex") # это индекс из ffprobe (например, 1)
+    data = request.get_json(silent=True) or {}
+    track_index = data.get("trackIndex")
 
-    try:
-        safe_filename = safe_media_name(filename)
-    except ValueError as err:
-        return jsonify({"error": str(err)}), 400
+    if track_index is None:
+        return jsonify({"error": "trackIndex is required"}), 400
 
-    video_path = os.path.join(VIDEO_DIR, safe_filename)
-    # Создаем временный аудиофайл для этой дорожки
-    temp_audio_name = f"temp_{track_index}_{safe_filename}.mka"
+    video_path_obj, video_identity, error_response = resolve_video_path_from_payload(data)
+    if error_response:
+        payload, status_code = error_response
+        return jsonify(payload), status_code
+
+    video_path = str(video_path_obj)
+
+    track_key = _make_dedupe_key("track", {
+        "video": video_identity,
+        "trackIndex": str(track_index),
+    })
+
+    temp_audio_name = f"temp_track_{track_key[:24]}.mka"
     temp_audio_path = os.path.join(VIDEO_DIR, temp_audio_name)
 
     if not os.path.exists(temp_audio_path):

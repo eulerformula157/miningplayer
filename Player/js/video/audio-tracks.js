@@ -63,9 +63,13 @@ volume.oninput = () => {
     if (audioManager.externalAudio) audioManager.externalAudio.volume = volume.value;
 };
 
-async function loadAudioTrackList(filename) {
+async function loadAudioTrackList(videoRef) {
     try {
-        const { data } = await apiJson(`/get-audio-tracks?filename=${encodeURIComponent(filename)}`);
+        const query = typeof videoRef === "object" && videoRef?.videoFileId
+            ? `videoFileId=${encodeURIComponent(videoRef.videoFileId)}`
+            : `filename=${encodeURIComponent(videoRef)}`;
+
+        const { data } = await apiJson(`/get-audio-tracks?${query}`);
         audioTrackSelect.innerHTML = "";
         if (data.tracks && data.tracks.length > 1) {
             data.tracks.forEach((track, index) => {
@@ -120,7 +124,11 @@ function getValidatedVolume() {
 }
 
 document.getElementById("previewAudioBtn").addEventListener("click", async () => {
-    if (!currentVideoFile) return showToast("Video is not selected: " + err.message, "error", 6000);
+    const videoPayload = getCurrentVideoPayload();
+
+    if (!videoPayload) {
+        return showToast("Video is not selected", "error", 6000);
+    }
 
     const offsetStart = parseFloat(document.getElementById("subOffsetStart").value) || 0;
     const offsetEnd = parseFloat(document.getElementById("subOffsetEnd").value) || 0;
@@ -145,11 +153,11 @@ document.getElementById("previewAudioBtn").addEventListener("click", async () =>
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-                filename: currentVideoFile,
-                start,
-                end,
-                trackIndex: audioTrackSelect.value === "default" ? "a:0" : audioTrackSelect.value,
-                volume: volumeLevel
+				...videoPayload,
+				start,
+				end,
+				trackIndex: audioTrackSelect.value === "default" ? "a:0" : audioTrackSelect.value,
+				volume: volumeLevel
             })
         });
 

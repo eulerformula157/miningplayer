@@ -980,14 +980,22 @@ ankiAllBtn.onclick = async () => {
     const imageSubtitleText = includeImageSubtitle ? combinedText : "";
 
     try {
+		
+		const videoPayload = getCurrentVideoPayload();
+
+		if (!videoPayload) {
+			showToast("Video is not selected", "error", 6000);
+			return;
+		}		
+				
         const pictureEndpoint = screenshotMode === "webp"
             ? "/animated-webp"
             : "/screenshot";
 
         const picturePayload = screenshotMode === "webp"
             ? {
-                filename: currentVideoFile,
-                start: audioStart,
+				...videoPayload,
+				start: audioStart,
                 end: audioEnd,
                 text: imageSubtitleText,
                 fontSize: document.getElementById("fontSizeRange").value
@@ -1009,9 +1017,9 @@ ankiAllBtn.onclick = async () => {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    filename: currentVideoFile,
-                    start: audioStart,
-                    end: audioEnd,
+					...videoPayload,
+					start: audioStart,
+					end: audioEnd,
                     trackIndex: audioTrackSelect.value === "default" ? "a:0" : audioTrackSelect.value,
                     volume: volumeLevel
                 })
@@ -1268,7 +1276,12 @@ window.addEventListener("load", () => {
     updateIconButtons();
 	initSubtitleSidebar();
 
-	restoreCurrentVideoFromServer();
+	loadLibraryEpisodeFromUrl()
+		.then((loadedFromLibrary) => {
+			if (!loadedFromLibrary) {
+				restoreCurrentVideoFromServer();
+			}
+		});
 
     getJapaneseTokenizer?.()
         .then(() => loadKnownBasicWords?.())
