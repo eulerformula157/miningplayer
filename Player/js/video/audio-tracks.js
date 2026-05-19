@@ -5,23 +5,32 @@ class AudioTrackManager {
         this.currentTrack = "default";
     }
 
-    async setTrack(trackId, filename) {
-        if (trackId === "default") {
-            this.destroyExternal();
-            this.video.muted = false;
-            this.currentTrack = "default";
-            return;
-        }
+	async setTrack(trackId, videoPayload) {
+		if (trackId === "default") {
+			this.destroyExternal();
+			this.video.muted = false;
+			this.currentTrack = "default";
+			return;
+		}
 
-        try {
-            const { data } = await apiJson("/get-track-url", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    filename,
-                    trackIndex: trackId
-                })
-            });
+		if (!videoPayload) {
+			showToast("Video is not selected", "error", 5000);
+			return;
+		}
+
+		try {
+			const { data } = await apiJson("/get-track-url", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					...videoPayload,
+					trackIndex: trackId
+				})
+			});
+
+			if (data.error) {
+				throw new Error(data.error);
+			}
 
             this.destroyExternal();
             this.externalAudio = document.createElement("audio");
@@ -93,7 +102,10 @@ async function loadAudioTrackList(videoRef) {
 }
 
 audioTrackSelect.onchange = () => {
-    audioManager.setTrack(audioTrackSelect.value, currentVideoFile);
+    audioManager.setTrack(
+        audioTrackSelect.value,
+        getCurrentVideoPayload()
+    );
 };
 
 video.addEventListener("play", () => {

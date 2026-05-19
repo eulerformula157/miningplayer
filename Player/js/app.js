@@ -921,9 +921,11 @@ function maybePromptSubtitleDepthReset() {
 
 ankiAllBtn.onclick = async () => {
 	
-	if (!currentVideoFile) {
-	  showToast(t("toastVideoNotUploaded"), "error", 4000);
-	  return;
+	const initialVideoPayload = getCurrentVideoPayload();
+
+	if (!initialVideoPayload) {
+		showToast(t("toastVideoNotUploaded"), "error", 4000);
+		return;
 	}
 
     const offsetStart = parseFloat(document.getElementById("subOffsetStart").value) || 0;
@@ -992,20 +994,22 @@ ankiAllBtn.onclick = async () => {
             ? "/animated-webp"
             : "/screenshot";
 
-        const picturePayload = screenshotMode === "webp"
-            ? {
+		const picturePayload = screenshotMode === "webp"
+			? {
 				...videoPayload,
 				start: audioStart,
-                end: audioEnd,
-                text: imageSubtitleText,
-                fontSize: document.getElementById("fontSizeRange").value
-            }
-            : {
-                filename: currentVideoFile,
-                time: targetTime,
-                text: imageSubtitleText,
-                fontSize: document.getElementById("fontSizeRange").value
-            };
+				end: audioEnd,
+				text: imageSubtitleText,
+				fontSize: document.getElementById("fontSizeRange").value
+			}
+			: {
+				...videoPayload,
+				time: targetTime,
+				text: imageSubtitleText,
+				fontSize: document.getElementById("fontSizeRange").value
+			};
+
+		console.log("picturePayload", pictureEndpoint, picturePayload);
 
         const [sRes, aRes] = await Promise.all([
             fetch(buildApiUrl(pictureEndpoint), {
