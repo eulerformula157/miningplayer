@@ -408,23 +408,6 @@ body.modal-open {
   backface-visibility: hidden;
 }
 
-.cover-search-btn {
-  width: 100%;
-  margin-top: 8px;
-  padding: 7px 8px;
-  border: 1px solid #555;
-  border-radius: 6px;
-  background: #222;
-  color: #aaa;
-  font-size: 12px;
-}
-
-.cover-search-btn:hover {
-  background: #3a254f;
-  border-color: var(--accent-soft);
-  color: var(--accent-text);
-}
-
 .cover-panel {
   width: min(760px, 92vw);
   max-height: 86vh;
@@ -534,3 +517,41 @@ body.modal-open {
   border-color: #c62828;
 }
 
+.series-panel-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex: 0 0 auto;
+}
+
+#changeSeriesCoverBtn {
+  background: #2d0659;
+  border-color: var(--accent-soft);
+  color: var(--accent-text);
+  font-weight: 700;
+}
+
+#changeSeriesCoverBtn:hover {
+  background: #3a0872;
+  color: white;
+}
+
+.episode-title-checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.episode-completed-checkbox {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: #9b51e0;
+  cursor: pointer;
+}
+
+.episode-completed-checkbox:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}

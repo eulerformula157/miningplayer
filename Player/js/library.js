@@ -17,7 +17,45 @@ const coverSearchInput = document.getElementById("coverSearchInput");
 const coverSearchBtn = document.getElementById("coverSearchBtn");
 const coverResults = document.getElementById("coverResults");
 
+const changeSeriesCoverBtn = document.getElementById("changeSeriesCoverBtn");
+
 let currentCoverSeries = null;
+let currentOpenedSeries = null;
+
+function updateSeriesCompletedCount(seriesId, delta) {
+    const cards = document.querySelectorAll(".series-card");
+
+    for (const card of cards) {
+        if (String(card.dataset.seriesId) !== String(seriesId)) continue;
+
+        const completedEl = card.querySelector("[data-completed-episodes]");
+        const totalEl = card.querySelector("[data-total-episodes]");
+        const fillEl = card.querySelector(".progress-bar-fill");
+
+        if (!completedEl || !totalEl) return;
+
+        const currentCompleted = Number(completedEl.textContent || 0);
+        const total = Number(totalEl.textContent || 0);
+        const nextCompleted = Math.max(0, currentCompleted + delta);
+
+        completedEl.textContent = String(nextCompleted);
+
+        if (fillEl && total > 0) {
+            fillEl.style.width = `${Math.round((nextCompleted / total) * 100)}%`;
+        }
+
+        return;
+    }
+}
+
+function updateCurrentSeriesStatsText(delta) {
+    if (!currentOpenedSeries) return;
+
+    currentOpenedSeries.completedEpisodes = Math.max(
+        0,
+        Number(currentOpenedSeries.completedEpisodes || 0) + delta
+    );
+}
 
 function formatTime(seconds) {
     const value = Number(seconds || 0);
@@ -78,8 +116,8 @@ async function loadLibrarySeries() {
         return sum + Number(item.cardsCount || 0);
     }, 0);
 
-    librarySummary.textContent =
-        `${series.length} series · ${completedEpisodes}/${totalEpisodes} watched · ${totalCards} cards`;
+	librarySummary.textContent =
+		`${series.length} series · ${completedEpisodes}/${totalEpisodes} watched`;
 
     for (const item of series) {
         seriesGrid.appendChild(renderSeriesCard(item));
@@ -90,6 +128,7 @@ function renderSeriesCard(item) {
     const card = document.createElement("article");
     card.className = "series-card";
     card.title = item.title;
+	card.dataset.seriesId = item.id;
 
     const progressPercent = item.episodesCount
         ? Math.round((item.completedEpisodes / item.episodesCount) * 100)
@@ -111,35 +150,20 @@ function renderSeriesCard(item) {
 
         <div class="series-title">${escapeHtml(item.title)}</div>
 
-        <div class="series-meta">
-            <span>${escapeHtml(item.completedEpisodes)}/${escapeHtml(item.episodesCount)} eps</span>
-            <span>${escapeHtml(item.cardsCount)} cards</span>
-        </div>
+		<div class="series-meta">
+			<span>
+				<span data-completed-episodes>${escapeHtml(item.completedEpisodes)}</span>/<span data-total-episodes>${escapeHtml(item.episodesCount)}</span> eps
+			</span>
+		</div>
 
-        <div class="progress-bar">
-            <div class="progress-bar-fill" style="width: ${progressPercent}%"></div>
-        </div>
+		<div class="progress-bar">
+			<div class="progress-bar-fill" style="width: ${progressPercent}%"></div>
+		</div>
 
-        <div class="series-extra">
-            ${escapeHtml(formatTime(item.watchedSeconds))} watched<br>
-            ${escapeHtml(item.minedWordsCount)} words mined
-        </div>
-
-		<button class="cover-search-btn" type="button">
-			${item.coverUrl ? "Change cover" : "Find cover"}
-		</button>		
-		
     `;
 
 		card.addEventListener("click", () => {
 			openSeries(item.id);
-		});
-
-		const coverButton = card.querySelector(".cover-search-btn");
-
-		coverButton.addEventListener("click", (event) => {
-			event.stopPropagation();
-			openCoverSearchModal(item);
 		});
 
     return card;
@@ -160,6 +184,10 @@ async function openSeries(seriesId) {
 
     const series = data.series;
     const episodes = Array.isArray(data.episodes) ? data.episodes : [];
+	currentOpenedSeries = {
+		...series,
+		completedEpisodes: episodes.filter((episode) => episode.completed).length
+	};
 
     seriesTitle.textContent = series.title;
     seriesStats.textContent =
@@ -187,18 +215,22 @@ function renderEpisodeRow(episode) {
             ? `at ${formatTime(episode.currentTimeSeconds)}`
             : "not watched";
 
-    row.innerHTML = `
-        <div>
-            <div class="episode-title">
-                ${escapeHtml(statusIcon(status))} ${escapeHtml(episode.title)}
-            </div>
+	row.innerHTML = `
+		<div>
+			<label class="episode-title episode-title-checkbox">
+				<input
+					class="episode-completed-checkbox"
+					type="checkbox"
+					${episode.completed ? "checked" : ""}
+					data-episode-id="${escapeHtml(episode.id)}"
+				>
+				<span>${escapeHtml(episode.title)}</span>
+			</label>
 
             <div class="episode-meta">
-                ${episode.hasVideo ? "video ✓" : "video ×"} ·
-                ${episode.hasSubtitle ? "subtitles ✓" : "subtitles ×"} ·
-                ${escapeHtml(watched)}<br>
-                ${escapeHtml(episode.cardsCount)} cards ·
-                ${escapeHtml(episode.minedWordsCount)} words
+				${episode.hasVideo ? "video ✓" : "video ×"} ·
+				${episode.hasSubtitle ? "subtitles ✓" : "subtitles ×"} ·
+				<span data-episode-watched-text>${escapeHtml(watched)}</span>
             </div>
         </div>
 
@@ -209,6 +241,58 @@ function renderEpisodeRow(episode) {
             </a>
         </div>
     `;
+
+	const completedCheckbox = row.querySelector(".episode-completed-checkbox");
+
+	completedCheckbox.addEventListener("click", (event) => {
+		event.stopPropagation();
+	});
+
+completedCheckbox.addEventListener("change", async () => {
+    const previousValue = !completedCheckbox.checked;
+    const nextValue = completedCheckbox.checked;
+
+    completedCheckbox.disabled = true;
+
+    try {
+        const { response, data } = await apiJson(
+            `/library/episodes/${encodeURIComponent(episode.id)}/completed`,
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    completed: nextValue
+                })
+            }
+        );
+
+        if (!response.ok || data.error) {
+            throw new Error(data.error || "Could not update episode status");
+        }
+
+        const delta = nextValue ? 1 : -1;
+
+        episode.completed = nextValue;
+        updateCurrentSeriesStatsText(delta);
+        updateSeriesCompletedCount(currentOpenedSeries?.id, delta);
+
+        const watchedText = row.querySelector("[data-episode-watched-text]");
+        if (watchedText) {
+            watchedText.textContent = nextValue
+                ? "watched"
+                : episode.currentTimeSeconds > 0
+                    ? `at ${formatTime(episode.currentTimeSeconds)}`
+                    : "not watched";
+        }
+    } catch (err) {
+        completedCheckbox.checked = previousValue;
+        alert(err.message);
+    } finally {
+        completedCheckbox.disabled = false;
+    }
+});
 
     return row;
 }
@@ -406,4 +490,9 @@ coverModal.addEventListener("click", (event) => {
     if (event.target === coverModal) {
         closeCoverModal();
     }
+});
+
+changeSeriesCoverBtn.addEventListener("click", () => {
+    if (!currentOpenedSeries) return;
+    openCoverSearchModal(currentOpenedSeries);
 });

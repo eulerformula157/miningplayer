@@ -778,3 +778,67 @@ def save_episode_progress(
             "found": True,
             "progress": dict(row),
         }        
+        
+
+def set_episode_completed(
+    db_path: Path,
+    episode_id: int,
+    completed: bool,
+) -> dict:
+    with get_db(db_path) as conn:
+        episode = conn.execute(
+            """
+            SELECT id, duration_seconds
+            FROM episodes
+            WHERE id = ?
+            """,
+            (episode_id,),
+        ).fetchone()
+
+        if not episode:
+            return {
+                "found": False,
+                "progress": None,
+            }
+
+        conn.execute(
+            """
+            INSERT INTO watch_progress(
+                episode_id,
+                current_time_seconds,
+                duration_seconds,
+                watched_seconds,
+                completed,
+                last_watched_at
+            )
+            VALUES(?, 0, ?, 0, ?, CURRENT_TIMESTAMP)
+            ON CONFLICT(episode_id) DO UPDATE SET
+                completed = excluded.completed,
+                last_watched_at = CURRENT_TIMESTAMP
+            """,
+            (
+                episode_id,
+                episode["duration_seconds"],
+                1 if completed else 0,
+            ),
+        )
+
+        row = conn.execute(
+            """
+            SELECT
+                episode_id,
+                current_time_seconds,
+                duration_seconds,
+                watched_seconds,
+                completed,
+                last_watched_at
+            FROM watch_progress
+            WHERE episode_id = ?
+            """,
+            (episode_id,),
+        ).fetchone()
+
+        return {
+            "found": True,
+            "progress": dict(row),
+        }        

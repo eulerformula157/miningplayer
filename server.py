@@ -26,6 +26,7 @@ from library_db import (
     get_library_file_by_id,
     get_episode_playback,
     save_episode_progress,
+    set_episode_completed,
 )
 
 from library_covers import (
@@ -250,6 +251,25 @@ def library_episode_progress(episode_id):
         current_time_seconds=current_time_seconds,
         duration_seconds=duration_seconds,
         watched_delta_seconds=watched_delta_seconds,
+        completed=completed,
+    )
+
+    if not result.get("found"):
+        return jsonify({"error": "Episode not found"}), 404
+
+    return jsonify({
+        "ok": True,
+        "progress": result["progress"],
+    })
+
+@app.route("/library/episodes/<int:episode_id>/completed", methods=["POST"])
+def library_episode_completed(episode_id):
+    data = request.get_json(silent=True) or {}
+    completed = bool(data.get("completed", False))
+
+    result = set_episode_completed(
+        db_path=LIBRARY_DB_PATH,
+        episode_id=episode_id,
         completed=completed,
     )
 
