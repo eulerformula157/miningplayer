@@ -36,6 +36,26 @@
 	  </section>
 	</div>
   </div>
+
+<div id="coverModal" class="library-modal hidden">
+  <section class="cover-panel" role="dialog" aria-modal="true" aria-labelledby="coverModalTitle">
+    <div class="series-panel-header">
+      <div>
+        <h2 id="coverModalTitle">Find cover</h2>
+        <p id="coverModalSubtitle"></p>
+      </div>
+      <button id="closeCoverModalBtn" type="button">Close</button>
+    </div>
+
+    <div class="cover-search-row">
+      <input id="coverSearchInput" type="text" />
+      <button id="coverSearchBtn" type="button">Search</button>
+    </div>
+
+    <div id="coverResults" class="cover-results"></div>
+  </section>
+</div>  
+  
 </main>
 
   <script src="js/core/api.js"></script>

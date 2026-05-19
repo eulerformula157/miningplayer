@@ -31,6 +31,7 @@ PLAYER_DIR = BASE_DIR / "Player"
 VIDEO_DIR = BASE_DIR / "UploadedVideos"
 ANKI_HIGHLIGHT_CACHE_DIR = BASE_DIR / "anki_highlight_cache"
 
+
 anki_media_dir_raw = os.getenv("ANKI_MEDIA_DIR")
 
 if not anki_media_dir_raw:
@@ -58,5 +59,6 @@ ALLOWED_SUBTITLE_EXTENSIONS = {".srt", ".ass", ".vtt"}
 
 DEDUPE_INDEX_PATH = BASE_DIR / "dedupe_index.json"
 LIBRARY_DB_PATH = BASE_DIR / "library.sqlite3"
+LIBRARY_COVERS_DIR = BASE_DIR / "LibraryCovers"
 PORT = int(os.getenv("PORT", "5000"))
 

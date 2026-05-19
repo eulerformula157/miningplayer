@@ -375,6 +375,7 @@ def get_library_series_list(db_path: Path) -> list[dict]:
             SELECT
                 s.id,
                 s.title,
+                s.cover_file_id,
 
                 COUNT(DISTINCT e.id) AS episodes_count,
 
@@ -432,6 +433,7 @@ def get_library_series_list(db_path: Path) -> list[dict]:
             result.append({
                 "id": row["id"],
                 "title": row["title"],
+                "coverUrl": f"/library/cover/{row['id']}" if row["cover_file_id"] else None,
                 "episodesCount": episodes_count,
                 "episodesWithVideo": episodes_with_video,
                 "episodesWithSubtitle": episodes_with_subtitle,
@@ -453,7 +455,7 @@ def get_library_series_detail(db_path: Path, series_id: int) -> dict:
     with get_db(db_path) as conn:
         series_row = conn.execute(
             """
-            SELECT id, title
+            SELECT id, title, cover_file_id
             FROM series
             WHERE id = ?
             """,
@@ -574,6 +576,7 @@ def get_library_series_detail(db_path: Path, series_id: int) -> dict:
         series = {
             "id": series_row["id"],
             "title": series_row["title"],
+            "coverUrl": f"/library/cover/{series_row['id']}" if series_row["cover_file_id"] else None,
             "episodesCount": episodes_count,
             "episodesWithVideo": episodes_with_video,
             "episodesWithSubtitle": episodes_with_subtitle,

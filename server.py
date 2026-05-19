@@ -28,6 +28,12 @@ from library_db import (
     save_episode_progress,
 )
 
+from library_covers import (
+    search_anilist_covers,
+    save_series_cover,
+    get_series_cover_file,
+)
+
 from library_scanner import scan_library
 
 from config import (
@@ -41,6 +47,7 @@ from config import (
     ALLOWED_VIDEO_EXTENSIONS,
     ALLOWED_SUBTITLE_EXTENSIONS,
     MEDIA_LIBRARY_DIR,
+    LIBRARY_COVERS_DIR,
     DEDUPE_INDEX_PATH,
     LIBRARY_DB_PATH,
     PORT,
@@ -58,6 +65,7 @@ from utils_validation import (
 os.makedirs(VIDEO_DIR, exist_ok=True)
 os.makedirs(SCREENSHOT_DIR, exist_ok=True)
 os.makedirs(ANKI_HIGHLIGHT_CACHE_DIR, exist_ok=True)
+os.makedirs(LIBRARY_COVERS_DIR, exist_ok=True)
 
 last_heartbeat = time.time()
 dedupe_lock = threading.Lock()
@@ -341,6 +349,91 @@ def resolve_video_path_from_payload(data: dict) -> tuple[Optional[Path], Optiona
         "filename": safe_filename,
         "path": str(video_path),
     }, None
+
+@app.route("/library/series/<int:series_id>/cover/search", methods=["GET"])
+def library_series_cover_search(series_id):
+    detail = get_library_series_detail(LIBRARY_DB_PATH, series_id)
+
+    if not detail.get("found"):
+        return jsonify({"error": "Series not found"}), 404
+
+    query = request.args.get("q") or detail["series"]["title"]
+
+    try:
+        results = search_anilist_covers(query)
+    except urllib.error.HTTPError as err:
+        return jsonify({
+            "error": f"AniList request failed: HTTP {err.code}"
+        }), 502
+    except Exception as err:
+        return jsonify({
+            "error": str(err)
+        }), 502
+
+    return jsonify({
+        "seriesId": series_id,
+        "query": query,
+        "results": results,
+    })
+
+
+@app.route("/library/series/<int:series_id>/cover/select", methods=["POST"])
+def library_series_cover_select(series_id):
+    data = request.get_json(silent=True) or {}
+
+    source = data.get("source")
+    external_id = data.get("externalId")
+    cover_url = data.get("coverUrl")
+
+    if source != "anilist":
+        return jsonify({"error": "Unsupported cover source"}), 400
+
+    if not external_id or not cover_url:
+        return jsonify({"error": "externalId and coverUrl are required"}), 400
+
+    try:
+        result = save_series_cover(
+            db_path=LIBRARY_DB_PATH,
+            covers_dir=LIBRARY_COVERS_DIR,
+            series_id=series_id,
+            source=source,
+            external_id=external_id,
+            cover_url=cover_url,
+        )
+    except Exception as err:
+        return jsonify({"error": str(err)}), 500
+
+    if not result.get("found"):
+        return jsonify({"error": "Series not found"}), 404
+
+    return jsonify({
+        "ok": True,
+        "coverFileId": result["coverFileId"],
+        "coverUrl": f"/library/cover/{series_id}",
+    })
+
+
+@app.route("/library/cover/<int:series_id>", methods=["GET"])
+def library_series_cover(series_id):
+    result = get_series_cover_file(LIBRARY_DB_PATH, series_id)
+
+    if not result.get("found"):
+        return jsonify({"error": "Cover not found"}), 404
+
+    file_info = result["file"]
+    cover_path = Path(file_info["path"]).resolve()
+
+    if not is_within(LIBRARY_COVERS_DIR, cover_path):
+        return jsonify({"error": "Cover is outside LibraryCovers directory"}), 403
+
+    if not cover_path.exists() or not cover_path.is_file():
+        return jsonify({"error": "Cover file is missing"}), 404
+
+    return send_from_directory(
+        str(cover_path.parent),
+        cover_path.name,
+        as_attachment=False,
+    )
 
 # --- Статические файлы ---
 @app.route('/')
