@@ -25,6 +25,7 @@ from library_db import (
     get_library_series_detail,
     get_library_file_by_id,
     get_episode_playback,
+    save_episode_progress,
 )
 
 from library_scanner import scan_library
@@ -223,6 +224,34 @@ def library_episode_playback(episode_id):
 
     return jsonify(result["playback"])
 
+@app.route("/library/episodes/<int:episode_id>/progress", methods=["POST"])
+def library_episode_progress(episode_id):
+    data = request.get_json(silent=True) or {}
+
+    current_time_seconds = to_float(data.get("currentTimeSeconds"), 0)
+    watched_delta_seconds = to_float(data.get("watchedDeltaSeconds"), 0)
+
+    raw_duration = data.get("durationSeconds")
+    duration_seconds = None if raw_duration is None else to_float(raw_duration, 0)
+
+    completed = bool(data.get("completed", False))
+
+    result = save_episode_progress(
+        db_path=LIBRARY_DB_PATH,
+        episode_id=episode_id,
+        current_time_seconds=current_time_seconds,
+        duration_seconds=duration_seconds,
+        watched_delta_seconds=watched_delta_seconds,
+        completed=completed,
+    )
+
+    if not result.get("found"):
+        return jsonify({"error": "Episode not found"}), 404
+
+    return jsonify({
+        "ok": True,
+        "progress": result["progress"],
+    })
 
 @app.route("/library/file/<int:file_id>", methods=["GET"])
 def serve_library_file(file_id):
@@ -317,6 +346,10 @@ def resolve_video_path_from_payload(data: dict) -> tuple[Optional[Path], Optiona
 @app.route('/')
 def index():
     return send_from_directory(str(PLAYER_DIR), 'player.html')
+
+@app.route('/library-page')
+def library_page():
+    return send_from_directory(str(PLAYER_DIR), 'library.html')
 
 @app.route('/libs/kuromoji/dict/<path:filename>')
 def serve_kuromoji_dict(filename):

@@ -693,4 +693,85 @@ def get_episode_playback(db_path: Path, episode_id: int) -> dict:
         return {
             "found": True,
             "playback": playback,
+        }
+
+
+def save_episode_progress(
+    db_path: Path,
+    episode_id: int,
+    current_time_seconds: float,
+    duration_seconds: float | None,
+    watched_delta_seconds: float,
+    completed: bool,
+) -> dict:
+    current_time_seconds = max(0.0, float(current_time_seconds or 0))
+    watched_delta_seconds = max(0.0, float(watched_delta_seconds or 0))
+
+    if duration_seconds is not None:
+        duration_seconds = max(0.0, float(duration_seconds or 0))
+
+    with get_db(db_path) as conn:
+        episode = conn.execute(
+            """
+            SELECT id
+            FROM episodes
+            WHERE id = ?
+            """,
+            (episode_id,),
+        ).fetchone()
+
+        if not episode:
+            return {
+                "found": False,
+                "progress": None,
+            }
+
+        conn.execute(
+            """
+            INSERT INTO watch_progress(
+                episode_id,
+                current_time_seconds,
+                duration_seconds,
+                watched_seconds,
+                completed,
+                last_watched_at
+            )
+            VALUES(?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+            ON CONFLICT(episode_id) DO UPDATE SET
+                current_time_seconds = excluded.current_time_seconds,
+                duration_seconds = COALESCE(excluded.duration_seconds, watch_progress.duration_seconds),
+                watched_seconds = watch_progress.watched_seconds + excluded.watched_seconds,
+                completed = CASE
+                    WHEN excluded.completed = 1 THEN 1
+                    ELSE watch_progress.completed
+                END,
+                last_watched_at = CURRENT_TIMESTAMP
+            """,
+            (
+                episode_id,
+                current_time_seconds,
+                duration_seconds,
+                watched_delta_seconds,
+                1 if completed else 0,
+            ),
+        )
+
+        row = conn.execute(
+            """
+            SELECT
+                episode_id,
+                current_time_seconds,
+                duration_seconds,
+                watched_seconds,
+                completed,
+                last_watched_at
+            FROM watch_progress
+            WHERE episode_id = ?
+            """,
+            (episode_id,),
+        ).fetchone()
+
+        return {
+            "found": True,
+            "progress": dict(row),
         }        

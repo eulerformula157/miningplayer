@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Bunmine Library</title>
+  <link rel="stylesheet" href="styles/library.css" />
+</head>
+<body>
+<main class="library-page">
+  <div class="library-shell">
+    <header class="library-header">
+      <div>
+        <h1>Bunmine Library</h1>
+        <p id="librarySummary" class="library-summary">Loading...</p>
+      </div>
+
+      <div class="library-actions">
+        <button id="scanLibraryBtn" type="button">Scan library</button>
+        <a class="player-link" href="/">Player</a>
+      </div>
+    </header>
+
+    <section id="seriesGrid" class="series-grid"></section>
+
+	<div id="seriesModal" class="library-modal hidden">
+	  <section id="seriesPanel" class="series-panel" role="dialog" aria-modal="true" aria-labelledby="seriesTitle">
+		<div class="series-panel-header">
+		  <div>
+			<h2 id="seriesTitle"></h2>
+			<p id="seriesStats"></p>
+		  </div>
+		  <button id="closeSeriesPanelBtn" type="button">Close</button>
+		</div>
+
+		<div id="episodeList" class="episode-list"></div>
+	  </section>
+	</div>
+  </div>
+</main>
+
+  <script src="js/core/api.js"></script>
+  <script src="js/library.js"></script>
+</body>
+</html>

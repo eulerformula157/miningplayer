@@ -284,6 +284,8 @@ async function loadLibraryEpisodePlayback(playback) {
     currentLibraryVideoFileId = playback.videoFileId;
     currentLibrarySubtitleFileId = playback.subtitleFileId || null;
 
+	resetLibraryProgressTracking();
+
     // В library-режиме пока не используем старое имя файла из UploadedVideos.
     // Следующим шагом адаптируем screenshot/audio endpoints под episodeId.
     currentVideoFile = null;
@@ -405,3 +407,118 @@ function getCurrentVideoPayload() {
 
     return null;
 }
+
+let libraryProgressLastSentAtMs = 0;
+let libraryProgressLastVideoTime = 0;
+let libraryProgressSaveInFlight = false;
+
+function resetLibraryProgressTracking() {
+    libraryProgressLastSentAtMs = 0;
+    libraryProgressLastVideoTime = Number.isFinite(video.currentTime)
+        ? video.currentTime
+        : 0;
+}
+
+function getLibraryWatchedDeltaSeconds(currentTime) {
+    const previousTime = Number(libraryProgressLastVideoTime || 0);
+    const delta = currentTime - previousTime;
+
+    libraryProgressLastVideoTime = currentTime;
+
+    // Считаем только обычное движение вперёд.
+    // Перемотки и большие скачки не считаем как просмотр.
+    if (delta <= 0 || delta > 15) {
+        return 0;
+    }
+
+    return delta;
+}
+
+async function saveLibraryWatchProgress({ force = false, completed = false } = {}) {
+    if (!currentLibraryEpisodeId) return;
+    if (!Number.isFinite(video.currentTime)) return;
+
+    const now = Date.now();
+
+    if (!force && now - libraryProgressLastSentAtMs < 10000) {
+        return;
+    }
+
+    if (libraryProgressSaveInFlight) {
+        return;
+    }
+
+    const currentTime = Number(video.currentTime || 0);
+    const duration = Number.isFinite(video.duration) ? Number(video.duration) : null;
+    const watchedDelta = getLibraryWatchedDeltaSeconds(currentTime);
+
+    libraryProgressLastSentAtMs = now;
+    libraryProgressSaveInFlight = true;
+
+    try {
+        const { response, data } = await apiJson(
+            `/library/episodes/${encodeURIComponent(currentLibraryEpisodeId)}/progress`,
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    currentTimeSeconds: currentTime,
+                    durationSeconds: duration,
+                    watchedDeltaSeconds: watchedDelta,
+                    completed
+                })
+            }
+        );
+
+        if (!response.ok || data.error) {
+            throw new Error(data.error || "Could not save watch progress");
+        }
+    } catch (err) {
+        console.warn("Could not save library watch progress:", err);
+    } finally {
+        libraryProgressSaveInFlight = false;
+    }
+}
+
+function installLibraryProgressListeners() {
+    video.addEventListener("timeupdate", () => {
+        if (!currentLibraryEpisodeId || video.paused) return;
+
+        saveLibraryWatchProgress();
+    });
+
+    video.addEventListener("pause", () => {
+        saveLibraryWatchProgress({ force: true });
+    });
+
+    video.addEventListener("ended", () => {
+        saveLibraryWatchProgress({
+            force: true,
+            completed: true
+        });
+    });
+
+    window.addEventListener("beforeunload", () => {
+        if (!currentLibraryEpisodeId) return;
+
+        const currentTime = Number(video.currentTime || 0);
+        const duration = Number.isFinite(video.duration) ? Number(video.duration) : null;
+        const watchedDelta = getLibraryWatchedDeltaSeconds(currentTime);
+
+        const payload = JSON.stringify({
+            currentTimeSeconds: currentTime,
+            durationSeconds: duration,
+            watchedDeltaSeconds: watchedDelta,
+            completed: false
+        });
+
+        navigator.sendBeacon(
+            buildApiUrl(`/library/episodes/${encodeURIComponent(currentLibraryEpisodeId)}/progress`),
+            new Blob([payload], { type: "application/json" })
+        );
+    });
+}
+
+installLibraryProgressListeners();
